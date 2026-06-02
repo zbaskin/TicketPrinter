@@ -28,11 +28,11 @@ describe('TicketEditor', () => {
     expect(screen.getByText(/select an element/i)).toBeInTheDocument()
   })
 
-  it('renders the FglSourcePanel (pre block with HEAT visible)', () => {
+  it('renders the FglSourcePanel (pre block with NF visible)', () => {
     const { container } = render(<TicketEditor />)
     const pre = container.querySelector('pre')
     expect(pre).not.toBeNull()
-    expect(pre!.textContent).toContain('<HEAT 10>')
+    expect(pre!.textContent).toContain('<NF>')
   })
 
   it('stock selector change updates document stock to CINEMA', () => {

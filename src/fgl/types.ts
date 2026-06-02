@@ -69,7 +69,6 @@ export interface TicketDocument {
   stock: StockId
   customWidth?: number
   customHeight?: number
-  heat: number
   elements: TicketElement[]
   rawFglOverride?: string
 }

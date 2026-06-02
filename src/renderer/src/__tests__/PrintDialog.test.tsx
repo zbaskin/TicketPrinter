@@ -19,7 +19,7 @@ beforeEach(() => {
 // ─── Sample TicketDocument ────────────────────────────────────────────────────
 const sampleDoc: TicketDocument = {
   stock: 'CONCERT',
-  heat: 10,
+
   elements: [
     { type: 'text', row: 100, col: 100, font: 1, content: 'Hello World' }
   ]
@@ -113,7 +113,7 @@ describe('PrintDialog', () => {
     })
   })
 
-  it('uses doc.heat (10) in the FGL passed to print', async () => {
+  it('does NOT include a HEAT command in the FGL passed to print', async () => {
     mockPrint.mockResolvedValue({ success: true, bytesWritten: 50 })
     render(<PrintDialog document={sampleDoc} printerName="Boca Lemur" onClose={vi.fn()} />)
 
@@ -121,7 +121,8 @@ describe('PrintDialog', () => {
 
     await waitFor(() => {
       const fglArg = mockPrint.mock.calls[0][1] as string
-      expect(fglArg).toContain('<HEAT 10>')
+      expect(fglArg).not.toContain('<HEAT')
+      expect(fglArg).toContain('<NF>')
     })
   })
 
@@ -196,7 +197,8 @@ describe('PrintDialog', () => {
 
     await waitFor(() => {
       const fglArg = mockPrint.mock.calls[0][1] as string
-      expect(fglArg).toContain('<HEAT 10>')
+      expect(fglArg).toContain('<NF>')
+      expect(fglArg).not.toContain('<HEAT')
     })
   })
 })

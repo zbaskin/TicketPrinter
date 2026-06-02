@@ -2,11 +2,11 @@ import { describe, it, expect } from 'vitest'
 import { extractFields, substituteFields, applyDataRow } from '../template'
 import type { TicketDocument } from '../types'
 
-const emptyDoc: TicketDocument = { stock: 'CONCERT', heat: 10, elements: [] }
+const emptyDoc: TicketDocument = { stock: 'CONCERT', elements: [] }
 
 const docWithText: TicketDocument = {
   stock: 'CONCERT',
-  heat: 10,
+
   elements: [
     { type: 'text', row: 100, col: 100, font: 1, content: 'Hello {{name}}!' },
     { type: 'text', row: 200, col: 100, font: 1, content: 'Seat: {{seat_number}}' }
@@ -15,7 +15,7 @@ const docWithText: TicketDocument = {
 
 const docMixed: TicketDocument = {
   stock: 'CONCERT',
-  heat: 10,
+
   elements: [
     { type: 'text', row: 100, col: 100, font: 1, content: '{{name}} - {{seat_number}}' },
     { type: 'hline', row: 50, col: 0, length: 100, thickness: 1 },
@@ -25,7 +25,7 @@ const docMixed: TicketDocument = {
 
 const docNonText: TicketDocument = {
   stock: 'CONCERT',
-  heat: 10,
+
   elements: [
     { type: 'hline', row: 50, col: 0, length: 100, thickness: 1 },
     { type: 'box', row: 10, col: 10, width: 50, height: 30, thickness: 1 }
@@ -46,7 +46,7 @@ describe('extractFields', () => {
   it('returns [] for a document with text elements that have no placeholders', () => {
     const doc: TicketDocument = {
       stock: 'CONCERT',
-      heat: 10,
+    
       elements: [{ type: 'text', row: 100, col: 100, font: 1, content: 'Plain text, no placeholders' }]
     }
     expect(extractFields(doc)).toEqual([])
@@ -55,7 +55,7 @@ describe('extractFields', () => {
   it('returns field names found in a single text element', () => {
     const doc: TicketDocument = {
       stock: 'CONCERT',
-      heat: 10,
+    
       elements: [{ type: 'text', row: 100, col: 100, font: 1, content: 'Hello {{name}}!' }]
     }
     expect(extractFields(doc)).toEqual(['name'])
@@ -72,7 +72,7 @@ describe('extractFields', () => {
   it('returns a sorted array of field names', () => {
     const doc: TicketDocument = {
       stock: 'CONCERT',
-      heat: 10,
+    
       elements: [
         { type: 'text', row: 100, col: 100, font: 1, content: '{{zebra}} {{apple}} {{mango}}' }
       ]
@@ -83,7 +83,7 @@ describe('extractFields', () => {
   it('supports underscore-separated field names', () => {
     const doc: TicketDocument = {
       stock: 'CONCERT',
-      heat: 10,
+    
       elements: [{ type: 'text', row: 100, col: 100, font: 1, content: '{{first_name}} {{last_name}}' }]
     }
     expect(extractFields(doc)).toEqual(['first_name', 'last_name'])
@@ -92,7 +92,7 @@ describe('extractFields', () => {
   it('handles multiple occurrences of the same field in one element', () => {
     const doc: TicketDocument = {
       stock: 'CONCERT',
-      heat: 10,
+    
       elements: [{ type: 'text', row: 100, col: 100, font: 1, content: '{{name}} and {{name}} again' }]
     }
     expect(extractFields(doc)).toEqual(['name'])
@@ -101,7 +101,7 @@ describe('extractFields', () => {
   it('ignores non-text elements (hline, box, qr, barcode) when extracting fields', () => {
     const doc: TicketDocument = {
       stock: 'CONCERT',
-      heat: 10,
+    
       elements: [
         { type: 'hline', row: 50, col: 0, length: 100, thickness: 1 },
         { type: 'text', row: 100, col: 100, font: 1, content: '{{event}}' },
@@ -180,7 +180,7 @@ describe('applyDataRow', () => {
   it('leaves non-text elements unchanged', () => {
     const doc: TicketDocument = {
       stock: 'CONCERT',
-      heat: 10,
+    
       elements: [
         { type: 'hline', row: 50, col: 0, length: 100, thickness: 1 },
         { type: 'text', row: 100, col: 100, font: 1, content: '{{name}}' }
@@ -193,7 +193,7 @@ describe('applyDataRow', () => {
   it('preserves non-content properties of text elements', () => {
     const doc: TicketDocument = {
       stock: 'CONCERT',
-      heat: 10,
+    
       elements: [
         { type: 'text', row: 42, col: 99, font: 3, hwScale: [2, 2], rotation: 90, content: '{{field}}' }
       ]
@@ -215,11 +215,10 @@ describe('applyDataRow', () => {
     expect(result.elements).not.toBe(docWithText.elements)
   })
 
-  it('preserves document-level properties (stock, heat)', () => {
+  it('preserves document-level properties (stock)', () => {
     const data = { name: 'Alice', seat_number: 'A1' }
     const result = applyDataRow(docWithText, data)
     expect(result.stock).toBe('CONCERT')
-    expect(result.heat).toBe(10)
   })
 
   it('with empty data leaves all placeholders unchanged', () => {

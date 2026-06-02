@@ -6,7 +6,7 @@ import type { TicketDocument, TicketElement } from '../../../../fgl/types'
 
 const concertDoc: TicketDocument = {
   stock: 'CONCERT',
-  heat: 10,
+
   elements: [
     { type: 'text', row: 100, col: 100, font: 3, content: 'Hello' }
   ]
@@ -86,7 +86,7 @@ describe('PropertiesPanel', () => {
   it('shows validation error when element is out of bounds', () => {
     const outOfBoundsDoc: TicketDocument = {
       stock: 'CONCERT',
-      heat: 10,
+    
       elements: [
         { type: 'text', row: 0, col: 100, font: 3, content: 'Bad Row' } // row 0 < safeMargin 20
       ]
@@ -105,7 +105,7 @@ describe('PropertiesPanel', () => {
   it('shows hline-specific fields for an hline element', () => {
     const hlineDoc: TicketDocument = {
       stock: 'CONCERT',
-      heat: 10,
+    
       elements: [
         { type: 'hline', row: 200, col: 100, length: 400, thickness: 4 }
       ]
@@ -125,7 +125,7 @@ describe('PropertiesPanel', () => {
   it('shows box-specific fields including fill checkbox', () => {
     const boxDoc: TicketDocument = {
       stock: 'CONCERT',
-      heat: 10,
+    
       elements: [
         { type: 'box', row: 100, col: 100, width: 300, height: 200, thickness: 3 }
       ]
@@ -146,7 +146,7 @@ describe('PropertiesPanel', () => {
   it('shows qr-specific fields', () => {
     const qrDoc: TicketDocument = {
       stock: 'CONCERT',
-      heat: 10,
+    
       elements: [
         { type: 'qr', row: 100, col: 100, content: 'https://example.com', dotSize: 6 }
       ]

@@ -52,10 +52,6 @@ export function validate(doc: TicketDocument): ValidationError[] {
   const minCol = safeMargin
   const maxCol = heightDots - safeMargin
 
-  if (doc.heat < 1 || doc.heat > 30) {
-    errors.push({ field: 'heat', message: `Heat must be 1–30, got ${doc.heat}` })
-  }
-
   doc.elements.forEach((el, i) => {
     const b = elementBounds(el)
 

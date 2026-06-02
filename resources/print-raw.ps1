@@ -1,5 +1,7 @@
 # print-raw.ps1
 # Sends raw bytes to a Windows printer using the Winspool API.
+# RAW datatype: OpenPrinter -> StartDoc -> WritePrinter -> EndDoc -> ClosePrinter.
+# No StartPage/EndPage — those are GDI page primitives, not used for FGL raw streams.
 # Outputs "OK:<bytesWritten>" on success, throws on failure.
 param(
   [Parameter(Mandatory = $true)][string]$PrinterName,
@@ -28,12 +30,6 @@ public static class Winspool {
   public static extern bool EndDocPrinter(IntPtr hPrinter);
 
   [DllImport("winspool.drv", SetLastError = true)]
-  public static extern bool StartPagePrinter(IntPtr hPrinter);
-
-  [DllImport("winspool.drv", SetLastError = true)]
-  public static extern bool EndPagePrinter(IntPtr hPrinter);
-
-  [DllImport("winspool.drv", SetLastError = true)]
   public static extern bool WritePrinter(IntPtr hPrinter, IntPtr pBuf, int cbBuf, out int pcWritten);
 
   [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
@@ -53,33 +49,32 @@ if (-not [Winspool]::OpenPrinter($PrinterName, [ref]$handle, [IntPtr]::Zero)) {
 
 try {
   $doc = New-Object Winspool+DocInfo1
-  $doc.pDocName  = 'TicketPrinter'
+  $doc.pDocName   = 'TicketPrinter'
   $doc.pOutputFile = $null
-  $doc.pDatatype = 'RAW'
+  $doc.pDatatype  = 'RAW'
 
   $docId = [Winspool]::StartDocPrinter($handle, 1, [ref]$doc)
   if ($docId -le 0) {
     throw "StartDocPrinter failed (returned $docId)"
   }
 
-  [Winspool]::StartPagePrinter($handle) | Out-Null
-
-  $ptr = [System.Runtime.InteropServices.Marshal]::AllocHGlobal($bytes.Length)
   try {
-    [System.Runtime.InteropServices.Marshal]::Copy($bytes, 0, $ptr, $bytes.Length)
-    $written = 0
-    $ok = [Winspool]::WritePrinter($handle, $ptr, $bytes.Length, [ref]$written)
-    if (-not $ok) {
-      $err = [System.Runtime.InteropServices.Marshal]::GetLastWin32Error()
-      throw "WritePrinter failed (Win32 error $err)"
+    $ptr = [System.Runtime.InteropServices.Marshal]::AllocHGlobal($bytes.Length)
+    try {
+      [System.Runtime.InteropServices.Marshal]::Copy($bytes, 0, $ptr, $bytes.Length)
+      $written = 0
+      $ok = [Winspool]::WritePrinter($handle, $ptr, $bytes.Length, [ref]$written)
+      if (-not $ok) {
+        $err = [System.Runtime.InteropServices.Marshal]::GetLastWin32Error()
+        throw "WritePrinter failed (Win32 error $err)"
+      }
+      Write-Output "OK:$written"
+    } finally {
+      [System.Runtime.InteropServices.Marshal]::FreeHGlobal($ptr)
     }
-    Write-Output "OK:$written"
   } finally {
-    [System.Runtime.InteropServices.Marshal]::FreeHGlobal($ptr)
+    [Winspool]::EndDocPrinter($handle) | Out-Null
   }
-
-  [Winspool]::EndPagePrinter($handle) | Out-Null
-  [Winspool]::EndDocPrinter($handle) | Out-Null
 } finally {
   [Winspool]::ClosePrinter($handle) | Out-Null
 }

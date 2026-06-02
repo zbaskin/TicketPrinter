@@ -7,7 +7,7 @@ import { compile } from '../../../../fgl/compiler'
 
 const baseDoc: TicketDocument = {
   stock: 'CONCERT',
-  heat: 10,
+
   elements: [
     { type: 'text', row: 100, col: 100, font: 3, content: 'Hello' }
   ]

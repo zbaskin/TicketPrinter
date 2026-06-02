@@ -14,7 +14,6 @@ export interface EditorStore {
 
 const INITIAL_DOCUMENT: TicketDocument = {
   stock: 'CONCERT',
-  heat: 10,
   elements: []
 }
 

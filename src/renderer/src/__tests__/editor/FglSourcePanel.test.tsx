@@ -6,7 +6,7 @@ import type { TicketDocument } from '../../../../fgl/types'
 
 const simpleDoc: TicketDocument = {
   stock: 'CONCERT',
-  heat: 10,
+
   elements: [
     { type: 'text', row: 100, col: 100, font: 3, content: 'Hello' }
   ]
@@ -17,7 +17,7 @@ describe('FglSourcePanel', () => {
     const { container } = render(<FglSourcePanel document={simpleDoc} />)
     const pre = container.querySelector('pre')
     expect(pre).not.toBeNull()
-    expect(pre!.textContent).toContain('<HEAT 10>')
+    expect(pre!.textContent).toContain('<NF>')
   })
 
   it('shows the <NF> token in the output', () => {
@@ -36,7 +36,7 @@ describe('FglSourcePanel', () => {
     // Build a doc with enough elements to exceed 2000 chars
     const bigDoc: TicketDocument = {
       stock: 'CONCERT',
-      heat: 10,
+    
       elements: Array.from({ length: 50 }, (_, i) => ({
         type: 'text' as const,
         row: 100 + i * 20,

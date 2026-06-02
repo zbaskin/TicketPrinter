@@ -2,15 +2,14 @@ import { describe, it, expect } from 'vitest'
 import { compile } from '../compiler'
 import type { TicketDocument } from '../types'
 
-const base: TicketDocument = { stock: 'CONCERT', heat: 10, elements: [] }
+const base: TicketDocument = { stock: 'CONCERT', elements: [] }
 
 describe('compile', () => {
-  it('wraps output in HEAT, NF, and p commands in order', () => {
+  it('wraps output in NF and p commands in order', () => {
     const result = compile(base)
-    expect(result).toContain('<HEAT 10>')
+    expect(result).not.toContain('<HEAT')
     expect(result).toContain('<NF>')
     expect(result).toContain('<p>')
-    expect(result.indexOf('<HEAT 10>')).toBeLessThan(result.indexOf('<NF>'))
     expect(result.indexOf('<NF>')).toBeLessThan(result.indexOf('<p>'))
   })
 

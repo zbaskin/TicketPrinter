@@ -97,7 +97,6 @@ function compileElement(el: TicketElement): string {
 
 export function compile(doc: TicketDocument): string {
   const parts: string[] = []
-  parts.push(`<HEAT ${doc.heat}>`)
   parts.push('<NF>')
   for (const el of doc.elements) {
     parts.push(compileElement(el))

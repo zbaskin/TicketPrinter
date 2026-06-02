@@ -26,11 +26,6 @@ describe('useEditorStore', () => {
     expect(result.current.document.stock).toBe('CONCERT')
   })
 
-  it('initial document has heat 10', () => {
-    const { result } = renderHook(() => useEditorStore())
-    expect(result.current.document.heat).toBe(10)
-  })
-
   it('initial document has no elements', () => {
     const { result } = renderHook(() => useEditorStore())
     expect(result.current.document.elements).toHaveLength(0)
@@ -126,7 +121,7 @@ describe('useEditorStore', () => {
     act(() => {
       result.current.setDocument({
         stock: 'CINEMA',
-        heat: 10,
+      
         elements: [sampleText]
       })
     })

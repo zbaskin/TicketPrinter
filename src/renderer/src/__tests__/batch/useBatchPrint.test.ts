@@ -17,7 +17,7 @@ beforeEach(() => {
 
 const sampleDoc: TicketDocument = {
   stock: 'CONCERT',
-  heat: 10,
+
   elements: [
     { type: 'text', row: 100, col: 100, font: 1, content: 'Hello {{name}}' }
   ]

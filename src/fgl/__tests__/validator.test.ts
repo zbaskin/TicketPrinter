@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest'
 import { validate } from '../validator'
 import type { TicketDocument } from '../types'
 
-const concert: TicketDocument = { stock: 'CONCERT', heat: 10, elements: [] }
-const cinema: TicketDocument  = { stock: 'CINEMA',  heat: 10, elements: [] }
+const concert: TicketDocument = { stock: 'CONCERT', elements: [] }
+const cinema: TicketDocument  = { stock: 'CINEMA',  elements: [] }
 
 describe('validate', () => {
   it('passes a valid empty CONCERT document', () => {
@@ -12,16 +12,6 @@ describe('validate', () => {
 
   it('passes a valid empty CINEMA document', () => {
     expect(validate(cinema)).toHaveLength(0)
-  })
-
-  it('errors when heat is 0', () => {
-    const errors = validate({ ...concert, heat: 0 })
-    expect(errors.some((e) => e.field === 'heat')).toBe(true)
-  })
-
-  it('errors when heat is 31', () => {
-    const errors = validate({ ...concert, heat: 31 })
-    expect(errors.some((e) => e.field === 'heat')).toBe(true)
   })
 
   it('errors when text row is below safe margin', () => {

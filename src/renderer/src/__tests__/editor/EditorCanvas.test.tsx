@@ -18,7 +18,7 @@ vi.mock('../../editor/canvasUtils', async (importOriginal) => {
 
 const concertDoc: TicketDocument = {
   stock: 'CONCERT',
-  heat: 10,
+
   elements: [
     { type: 'text', row: 100, col: 100, font: 3, content: 'Hello' }
   ]
@@ -26,7 +26,7 @@ const concertDoc: TicketDocument = {
 
 const cinemaDoc: TicketDocument = {
   stock: 'CINEMA',
-  heat: 10,
+
   elements: []
 }
 
@@ -84,7 +84,7 @@ describe('EditorCanvas', () => {
   it('non-selected element does not have data-selected="true"', () => {
     const docTwoElements: TicketDocument = {
       stock: 'CONCERT',
-      heat: 10,
+    
       elements: [
         { type: 'text', row: 100, col: 100, font: 3, content: 'A' },
         { type: 'text', row: 200, col: 100, font: 3, content: 'B' }
@@ -100,7 +100,7 @@ describe('EditorCanvas', () => {
   it('renders a rect placeholder for qr elements', () => {
     const qrDoc: TicketDocument = {
       stock: 'CONCERT',
-      heat: 10,
+    
       elements: [
         { type: 'qr', row: 100, col: 100, content: 'https://example.com', dotSize: 6 }
       ]
@@ -218,7 +218,7 @@ describe('EditorCanvas', () => {
   it('double-clicking a non-text element does NOT show input', () => {
     const boxDoc: TicketDocument = {
       stock: 'CONCERT',
-      heat: 10,
+    
       elements: [
         { type: 'box', row: 100, col: 100, width: 200, height: 100, thickness: 2 }
       ]
