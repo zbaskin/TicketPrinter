@@ -1,39 +1,51 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
+import PrinterSetup from './settings/PrinterSetup'
+import TicketEditor from './editor/TicketEditor'
+import type { } from '../../fgl/types'
 
-function App(): React.JSX.Element {
-  const [printers, setPrinters] = useState<string[]>([])
+type Tab = 'setup' | 'editor'
 
-  useEffect(() => {
-    window.printerApi.listPrinters().then(setPrinters)
-  }, [])
+export default function App(): React.JSX.Element {
+  const [tab, setTab] = useState<Tab>('setup')
+  const [selectedPrinter, setSelectedPrinter] = useState<string>(
+    () => localStorage.getItem('selectedPrinter') ?? ''
+  )
 
   return (
     <div className="min-h-screen bg-gray-950 text-white flex flex-col">
-      <header className="border-b border-gray-800 px-6 py-4 flex items-center gap-3">
-        <h1 className="text-xl font-semibold tracking-tight">TicketPrinter</h1>
-        <span className="text-xs text-gray-500 font-mono">Boca Lemur FGL</span>
+      <header className="border-b border-gray-800 px-6 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <h1 className="text-lg font-semibold tracking-tight">TicketPrinter</h1>
+          <span className="text-xs text-gray-500 font-mono bg-gray-900 px-2 py-0.5 rounded">Boca Lemur FGL</span>
+        </div>
       </header>
 
-      <main className="flex-1 p-6">
-        <p className="text-gray-400 mb-6 text-sm">
-          Visual ticket designer — editor coming soon.
-        </p>
+      <nav className="border-b border-gray-800 px-6 flex gap-1">
+        {(['setup', 'editor'] as Tab[]).map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`px-4 py-2.5 text-sm font-medium capitalize transition-colors border-b-2 -mb-px ${
+              tab === t
+                ? 'border-blue-500 text-white'
+                : 'border-transparent text-gray-400 hover:text-gray-200'
+            }`}
+          >
+            {t === 'editor' ? 'Editor' : 'Printer Setup'}
+          </button>
+        ))}
+      </nav>
 
-        {printers.length > 0 && (
-          <div className="bg-gray-900 rounded-lg p-4 max-w-sm">
-            <h2 className="text-sm font-medium text-gray-300 mb-2">Detected Printers</h2>
-            <ul className="space-y-1">
-              {printers.map((p) => (
-                <li key={p} className="text-sm font-mono text-green-400">
-                  {p}
-                </li>
-              ))}
-            </ul>
-          </div>
+      <main className="flex-1 p-4 flex flex-col">
+        {tab === 'setup' && (
+          <PrinterSetup
+            onPrinterSelected={(p) => setSelectedPrinter(p)}
+          />
+        )}
+        {tab === 'editor' && (
+          <TicketEditor />
         )}
       </main>
     </div>
   )
 }
-
-export default App
