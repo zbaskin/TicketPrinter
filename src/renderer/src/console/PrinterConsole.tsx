@@ -9,6 +9,7 @@ interface LogEntry {
   command: string
   result: QueryResult
   decoded?: S1Status
+  pending?: boolean
 }
 
 interface PrinterConsoleProps {
@@ -58,16 +59,32 @@ export default function PrinterConsole({ printerName }: PrinterConsoleProps): Re
     if (!printerName || !cmd.trim() || sending) return
     setSending(true)
     const timestamp = formatTime(new Date())
+    const entryId = nextId.current++
+
+    // Add a pending entry immediately so the user sees something happened
+    setLog((prev) => [
+      ...prev,
+      { id: entryId, timestamp, command: cmd, result: { sent: '', responseHex: '', responseText: '' }, pending: true }
+    ])
+
     try {
       const result = await window.printerApi.query(printerName, cmd)
       const decoded =
         cmd === '<S1>' && result.responseHex
           ? decodeS1(firstByteFromHex(result.responseHex) ?? 0)
           : undefined
-      setLog((prev) => [
-        ...prev,
-        { id: nextId.current++, timestamp, command: cmd, result, decoded }
-      ])
+      setLog((prev) =>
+        prev.map((e) => e.id === entryId ? { ...e, result, decoded, pending: false } : e)
+      )
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      setLog((prev) =>
+        prev.map((e) =>
+          e.id === entryId
+            ? { ...e, result: { sent: '', responseHex: '', responseText: '', error: msg }, pending: false }
+            : e
+        )
+      )
     } finally {
       setSending(false)
     }
@@ -116,7 +133,7 @@ export default function PrinterConsole({ printerName }: PrinterConsoleProps): Re
           <button
             key={cmd}
             onClick={() => void sendCommand(cmd)}
-            disabled={sending}
+            disabled={!printerName || sending}
             className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-gray-200 text-xs font-mono rounded-md transition-colors border border-gray-700"
           >
             {cmd}
@@ -136,7 +153,11 @@ export default function PrinterConsole({ printerName }: PrinterConsoleProps): Re
               <span className="text-blue-400 text-xs font-mono">{entry.command}</span>
             </div>
 
-            {entry.result.responseHex ? (
+            {entry.pending ? (
+              <p className="text-gray-500 text-xs font-mono animate-pulse">Waiting for response…</p>
+            ) : entry.result.error ? (
+              <p className="text-red-400 text-xs font-mono">Error: {entry.result.error}</p>
+            ) : entry.result.responseHex ? (
               <>
                 <div className="text-xs font-mono">
                   <span className="text-gray-500">HEX: </span>
@@ -149,7 +170,6 @@ export default function PrinterConsole({ printerName }: PrinterConsoleProps): Re
                   )}
                 </div>
 
-                {/* Decoded S1 status */}
                 {entry.decoded && (
                   <div className="flex flex-wrap gap-1 mt-1">
                     <StatusField label="Out of stock" value={entry.decoded.outOfStock} />

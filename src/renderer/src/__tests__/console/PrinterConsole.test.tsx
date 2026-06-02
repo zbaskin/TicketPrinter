@@ -126,14 +126,15 @@ describe('PrinterConsole', () => {
     })
   })
 
-  it('error result also shows the "driver may not support" warning', async () => {
+  it('result with error field shows error message, not "driver may not support"', async () => {
     mockQuery.mockResolvedValueOnce(
       makeResult({ responseHex: '', responseText: '', error: 'timeout' })
     )
     render(<PrinterConsole printerName="Boca Lemur" />)
     fireEvent.click(screen.getByRole('button', { name: '<S1>' }))
     await waitFor(() => {
-      expect(screen.getByText(/driver may not support/i)).toBeInTheDocument()
+      expect(screen.getByText(/error:.*timeout/i)).toBeInTheDocument()
+      expect(screen.queryByText(/driver may not support/i)).not.toBeInTheDocument()
     })
   })
 
