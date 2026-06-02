@@ -46,14 +46,14 @@ describe('TicketEditor', () => {
 
   it('Print button is disabled when no printer is in localStorage', () => {
     render(<TicketEditor />)
-    const printBtn = screen.getByRole('button', { name: /print/i })
+    const printBtn = screen.getByRole('button', { name: /^print$/i })
     expect(printBtn).toBeDisabled()
   })
 
   it('Print button is enabled when a printer is in localStorage', () => {
     localStorage.setItem('selectedPrinter', 'Boca Lemur')
     render(<TicketEditor />)
-    const printBtn = screen.getByRole('button', { name: /print/i })
+    const printBtn = screen.getByRole('button', { name: /^print$/i })
     expect(printBtn).not.toBeDisabled()
   })
 
@@ -84,5 +84,17 @@ describe('TicketEditor', () => {
     fireEvent.click(screen.getByRole('button', { name: /^visual$/i }))
     expect(screen.getByRole('button', { name: /text/i })).toBeInTheDocument()
     expect(screen.queryByRole('textbox')).toBeNull()
+  })
+
+  it('"Batch Print" button is present in the toolbar', () => {
+    render(<TicketEditor />)
+    expect(screen.getByRole('button', { name: /batch print/i })).toBeInTheDocument()
+  })
+
+  it('clicking "Batch Print" shows the BatchPrintPanel', () => {
+    render(<TicketEditor />)
+    fireEvent.click(screen.getByRole('button', { name: /batch print/i }))
+    // BatchPrintPanel renders a dialog with "Print All" button
+    expect(screen.getByRole('button', { name: /print all/i })).toBeInTheDocument()
   })
 })

@@ -6,11 +6,13 @@ import PropertiesPanel from './PropertiesPanel'
 import FglSourcePanel from './FglSourcePanel'
 import FglEditorPanel from './FglEditorPanel'
 import PrintDialog from '../print/PrintDialog'
+import BatchPrintPanel from '../batch/BatchPrintPanel'
 import type { StockId } from '../../../fgl/types'
 
 export default function TicketEditor(): React.JSX.Element {
   const store = useEditorStore()
   const [showPrintDialog, setShowPrintDialog] = useState(false)
+  const [showBatchPanel, setShowBatchPanel] = useState(false)
   const [editorMode, setEditorMode] = useState<'visual' | 'fgl'>('visual')
 
   const selectedPrinter = localStorage.getItem('selectedPrinter') ?? ''
@@ -59,6 +61,13 @@ export default function TicketEditor(): React.JSX.Element {
         )}
 
         <div className="flex-1" />
+
+        <button
+          onClick={() => setShowBatchPanel(true)}
+          className="px-3 py-1 bg-purple-700 hover:bg-purple-600 text-white text-xs font-medium rounded transition-colors"
+        >
+          Batch Print
+        </button>
 
         <button
           onClick={() => setShowPrintDialog(true)}
@@ -127,6 +136,31 @@ export default function TicketEditor(): React.JSX.Element {
           printerName={selectedPrinter}
           onClose={() => setShowPrintDialog(false)}
         />
+      )}
+
+      {showBatchPanel && (
+        <div
+          role="dialog"
+          aria-label="Batch Print"
+          className="fixed inset-0 bg-black/60 flex items-center justify-center z-50"
+          onClick={(e) => e.target === e.currentTarget && setShowBatchPanel(false)}
+        >
+          <div className="bg-gray-950 border border-gray-700 rounded-xl shadow-2xl w-full max-w-2xl p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-semibold text-white">Batch Print</h2>
+              <button
+                onClick={() => setShowBatchPanel(false)}
+                className="text-gray-400 hover:text-white text-xl leading-none"
+              >
+                ×
+              </button>
+            </div>
+            <BatchPrintPanel
+              document={store.document}
+              printerName={selectedPrinter}
+            />
+          </div>
+        </div>
       )}
     </div>
   )
