@@ -16,7 +16,7 @@ interface PrinterConsoleProps {
   printerName: string
 }
 
-const QUICK_COMMANDS = ['<S1>', '<S8>', '<S11>', '<S99>'] as const
+const QUICK_COMMANDS = ['<S1>', '<S8>', '<S11>', '<S99>', '<NF><bf0050,0050,1000,0800><p>'] as const
 
 function formatTime(d: Date): string {
   return [
@@ -155,36 +155,54 @@ export default function PrinterConsole({ printerName }: PrinterConsoleProps): Re
 
             {entry.pending ? (
               <p className="text-gray-500 text-xs font-mono animate-pulse">Waiting for response…</p>
-            ) : entry.result.error ? (
-              <p className="text-red-400 text-xs font-mono">Error: {entry.result.error}</p>
-            ) : entry.result.responseHex ? (
+            ) : (
               <>
-                <div className="text-xs font-mono">
-                  <span className="text-gray-500">HEX: </span>
-                  <span className="text-green-400">{entry.result.responseHex}</span>
-                  {entry.result.responseText && (
-                    <>
-                      <span className="text-gray-500 ml-2">ASCII: </span>
-                      <span className="text-yellow-300">{entry.result.responseText}</span>
-                    </>
-                  )}
-                </div>
+                {/* Always show sent byte count so we can confirm write succeeded */}
+                {entry.result.sent ? (
+                  <p className="text-green-600 text-xs font-mono mb-1">
+                    ✓ Sent {entry.result.sent.length / 2} bytes to printer
+                  </p>
+                ) : (
+                  <p className="text-red-400 text-xs font-mono mb-1">✗ Send failed — command not written</p>
+                )}
 
-                {entry.decoded && (
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    <StatusField label="Out of stock" value={entry.decoded.outOfStock} />
-                    <StatusField label="Jam" value={entry.decoded.jam} />
-                    <StatusField label="Busy" value={entry.decoded.busy} />
-                    <StatusField label="Error" value={entry.decoded.error} />
-                    <StatusField label="Cover open" value={entry.decoded.coverOpen} />
-                    <StatusField label="Cutter fault" value={entry.decoded.cutterFault} />
-                  </div>
+                {/* Response or read-error explanation */}
+                {entry.result.responseHex ? (
+                  <>
+                    <div className="text-xs font-mono">
+                      <span className="text-gray-500">HEX: </span>
+                      <span className="text-green-400">{entry.result.responseHex}</span>
+                      {entry.result.responseText && (
+                        <>
+                          <span className="text-gray-500 ml-2">ASCII: </span>
+                          <span className="text-yellow-300">{entry.result.responseText}</span>
+                        </>
+                      )}
+                    </div>
+
+                    {entry.decoded && (
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        <StatusField label="Out of stock" value={entry.decoded.outOfStock} />
+                        <StatusField label="Jam" value={entry.decoded.jam} />
+                        <StatusField label="Busy" value={entry.decoded.busy} />
+                        <StatusField label="Error" value={entry.decoded.error} />
+                        <StatusField label="Cover open" value={entry.decoded.coverOpen} />
+                        <StatusField label="Cutter fault" value={entry.decoded.cutterFault} />
+                      </div>
+                    )}
+                  </>
+                ) : entry.result.error ? (
+                  <p className="text-amber-400 text-xs font-mono">
+                    {entry.result.error === '6'
+                      ? 'No response (USB driver is write-only — this is normal)'
+                      : `Read error: ${entry.result.error}`}
+                  </p>
+                ) : (
+                  <p className="text-amber-400 text-xs font-mono">
+                    No response — driver may not support bidirectional reads
+                  </p>
                 )}
               </>
-            ) : (
-              <p className="text-amber-400 text-xs font-mono">
-                No response — driver may not support bidirectional reads
-              </p>
             )}
           </div>
         ))}

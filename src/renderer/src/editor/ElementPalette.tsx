@@ -7,7 +7,7 @@ interface ElementPaletteProps {
 const PALETTE_ITEMS: Array<{ label: string; element: TicketElement }> = [
   {
     label: 'Text',
-    element: { type: 'text', row: 100, col: 100, font: 3, content: 'New Text' }
+    element: { type: 'text', row: 100, col: 100, font: 3, hwScale: [3, 3], content: 'New Text' }
   },
   {
     label: 'H Line',

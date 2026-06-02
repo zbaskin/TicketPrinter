@@ -21,9 +21,9 @@ const sampleHLine: TicketElement = {
 }
 
 describe('useEditorStore', () => {
-  it('initial document has CONCERT stock', () => {
+  it('initial document has CINEMA stock', () => {
     const { result } = renderHook(() => useEditorStore())
-    expect(result.current.document.stock).toBe('CONCERT')
+    expect(result.current.document.stock).toBe('CINEMA')
   })
 
   it('initial document has no elements', () => {

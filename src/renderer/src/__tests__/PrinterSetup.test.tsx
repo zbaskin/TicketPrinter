@@ -59,7 +59,7 @@ describe('PrinterSetup', () => {
     expect(localStorage.getItem('selectedPrinter')).toBe('Zebra ZD420')
   })
 
-  it('calls printerApi.print with <HEAT 10><NF><p> when Test Connection is clicked', async () => {
+  it('calls printerApi.print with <NF><p> when Test Connection is clicked', async () => {
     mockListPrinters.mockResolvedValueOnce(['Boca Lemur'])
     mockPrint.mockResolvedValueOnce({ success: true, bytesWritten: 10 })
     render(<PrinterSetup />)
@@ -76,7 +76,7 @@ describe('PrinterSetup', () => {
     fireEvent.click(testBtn)
 
     await waitFor(() => {
-      expect(mockPrint).toHaveBeenCalledWith('Boca Lemur', '<HEAT 10><NF><p>')
+      expect(mockPrint).toHaveBeenCalledWith('Boca Lemur', '<NF><p>')
     })
   })
 

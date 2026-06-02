@@ -80,18 +80,15 @@ export async function queryPrinter(printerName: string, command: string): Promis
 
 export async function printRaw(printerName: string, fglData: string): Promise<PrintResult> {
   const tmpFile = join(tmpdir(), `tp-${Date.now()}.fgl`)
-  const scriptPath = app.isPackaged
-    ? join(process.resourcesPath, 'print-raw.ps1')
-    : join(app.getAppPath(), 'resources', 'print-raw.ps1')
+  const pyScript = app.isPackaged
+    ? join(process.resourcesPath, 'print-fgl.py')
+    : join(app.getAppPath(), 'resources', 'print-fgl.py')
 
   try {
     await writeFile(tmpFile, fglData, 'ascii')
-    const { stdout, stderr } = await execAsync(
-      `powershell -NoProfile -ExecutionPolicy Bypass -File "${scriptPath}" -PrinterName "${printerName}" -DataPath "${tmpFile}"`
+    const { stdout } = await execAsync(
+      `python "${pyScript}" "${printerName}" "${tmpFile}"`
     )
-    if (stderr.trim()) {
-      return { success: false, error: stderr.trim() }
-    }
     const match = stdout.match(/OK:(\d+)/)
     if (match) {
       return { success: true, bytesWritten: parseInt(match[1], 10) }

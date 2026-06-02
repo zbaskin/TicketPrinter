@@ -27,12 +27,14 @@ export default function PrintDialog({ document: doc, printerName, onClose }: Pri
   const [copies, setCopies] = useState<number>(1)
   const [printing, setPrinting] = useState<boolean>(false)
   const [copyStates, setCopyStates] = useState<CopyState[]>([])
+  const [showFgl, setShowFgl] = useState(false)
 
-  const compiledFgl = doc.rawFglOverride ?? compile(doc)
+  const compiledFgl = compile(doc)
   const byteCount = new TextEncoder().encode(compiledFgl).length
+  const isEmpty = !doc.rawFglOverride && doc.elements.length === 0
 
   async function handlePrint(): Promise<void> {
-    const fgl = doc.rawFglOverride ?? compile(doc)
+    const fgl = compile(doc)
     const states: CopyState[] = Array.from({ length: copies }, (_, i) => ({ index: i, status: 'queued' }))
     setCopyStates(states)
     setPrinting(true)
@@ -62,7 +64,7 @@ export default function PrintDialog({ document: doc, printerName, onClose }: Pri
       className="fixed inset-0 bg-black/60 flex items-center justify-center z-50"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-gray-900 border border-gray-700 rounded-xl shadow-2xl w-full max-w-md p-6 space-y-5">
+      <div className="bg-gray-900 border border-gray-700 rounded-xl shadow-2xl w-full max-w-lg p-6 space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-white">Print Ticket</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-white text-xl leading-none">×</button>
@@ -72,8 +74,27 @@ export default function PrintDialog({ document: doc, printerName, onClose }: Pri
           Printer: <span className="text-white font-mono">{printerName}</span>
         </div>
 
-        <div className="text-sm text-gray-400">
-          FGL size: <span className="text-white font-mono">{byteCount} bytes</span>
+        {/* Empty document warning */}
+        {isEmpty && (
+          <div className="bg-amber-900/30 border border-amber-700 rounded-md px-3 py-2 text-sm text-amber-300">
+            No elements on canvas — this will print a blank ticket. Add text or shapes in the Editor first.
+          </div>
+        )}
+
+        {/* FGL preview */}
+        <div className="space-y-1">
+          <button
+            onClick={() => setShowFgl((v) => !v)}
+            className="text-xs text-gray-400 hover:text-gray-200 flex items-center gap-1"
+          >
+            <span>{showFgl ? '▾' : '▸'}</span>
+            FGL payload — {byteCount} bytes
+          </button>
+          {showFgl && (
+            <pre className="bg-gray-950 border border-gray-800 rounded p-2 text-xs font-mono text-green-400 overflow-x-auto max-h-32 whitespace-pre-wrap break-all">
+              {compiledFgl}
+            </pre>
+          )}
         </div>
 
         <div className="space-y-1">
@@ -90,7 +111,7 @@ export default function PrintDialog({ document: doc, printerName, onClose }: Pri
         </div>
 
         {copyStates.length > 0 && (
-          <ul className="space-y-1 max-h-40 overflow-y-auto">
+          <ul className="space-y-1 max-h-32 overflow-y-auto">
             {copyStates.map((c) => (
               <li key={c.index} className={`text-sm font-mono ${STATUS_COLORS[c.status]}`}>
                 Copy {c.index + 1}: {c.status}{c.error ? ` — ${c.error}` : ''}
@@ -105,7 +126,7 @@ export default function PrintDialog({ document: doc, printerName, onClose }: Pri
             disabled={printing}
             className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed text-white text-sm font-medium rounded-md transition-colors"
           >
-            {printing ? 'Printing…' : `Print ${copies > 1 ? `× ${copies}` : ''}`}
+            {printing ? 'Printing…' : `Print${copies > 1 ? ` × ${copies}` : ''}`}
           </button>
           <button
             onClick={onClose}

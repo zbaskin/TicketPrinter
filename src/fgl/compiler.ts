@@ -11,46 +11,46 @@ import type {
 } from './types'
 import { generateQRMatrix } from './qr'
 
-function n4(v: number): string {
-  return String(Math.round(v)).padStart(4, '0')
+// Plain integer, no zero-padding (FGL does not require padding)
+function n(v: number): string {
+  return String(Math.round(v))
+}
+
+// Rotation commands (uppercase = per-ticket, reset with <NR>)
+const ROTATION_CMDS: Record<number, string> = {
+  90: '<RR>',
+  180: '<RU>',
+  270: '<RL>'
 }
 
 function compileText(el: TextElement): string {
-  let s = `<r${n4(el.row)}><c${n4(el.col)}><F${el.font}>`
-  if (el.hwScale) {
-    s += `<HW${el.hwScale[0]},${el.hwScale[1]}>`
-  }
-  if (el.rotation) {
-    const rotMap: Record<number, string> = { 90: '<rte>', 180: '<ud>', 270: '<rte><ud>' }
-    s += rotMap[el.rotation] ?? ''
-  }
-  s += el.content
-  return s
+  const font = `<F${el.font}>`
+  // FGL <HW>: first = height multiplier, second = width multiplier
+  // Our hwScale = [widthMult, heightMult], so swap for FGL
+  const hw = el.hwScale ? `<HW${el.hwScale[1]},${el.hwScale[0]}>` : ''
+  const rotCmd = el.rotation ? (ROTATION_CMDS[el.rotation] ?? '') : ''
+  const resetRot = rotCmd ? '<NR>' : ''
+  const pos = `<RC${n(el.row)},${n(el.col)}>`
+  return `${font}${hw}${rotCmd}${pos}${el.content}${resetRot}`
 }
 
 function compileHLine(el: HLineElement): string {
-  if (el.thickness === 1) {
-    return `<lh${n4(el.row)},${n4(el.col)},${n4(el.length)}>`
-  }
-  // thickness > 1: use filled box (height = thickness, width = length)
-  return `<bf${n4(el.row)},${n4(el.col)},${n4(el.length)},${n4(el.thickness)}>`
+  // <LH row, colStart, colEnd, thickness>
+  return `<LH${n(el.row)},${n(el.col)},${n(el.col + el.length)},${el.thickness}>`
 }
 
 function compileVLine(el: VLineElement): string {
-  if (el.thickness === 1) {
-    return `<lv${n4(el.row)},${n4(el.col)},${n4(el.height)}>`
-  }
-  // thickness > 1: use filled box (width = thickness, height = height)
-  return `<bf${n4(el.row)},${n4(el.col)},${n4(el.thickness)},${n4(el.height)}>`
+  // <LV col, rowStart, rowEnd, thickness>  — col is FIRST in FGL spec
+  return `<LV${n(el.col)},${n(el.row)},${n(el.row + el.height)},${el.thickness}>`
 }
 
 function compileBox(el: BoxElement): string {
   if (el.fill) {
-    // <bf row, col, col-extent (width), row-extent (height)>
-    return `<bf${n4(el.row)},${n4(el.col)},${n4(el.width)},${n4(el.height)}>`
+    // Filled rectangle via thick horizontal line (LH with height as thickness)
+    return `<LH${n(el.row)},${n(el.col)},${n(el.col + el.width)},${el.height}>`
   }
-  // <box row1,col1,row2,col2,thickness>
-  return `<box${n4(el.row)},${n4(el.col)},${n4(el.row + el.height)},${n4(el.col + el.width)},${el.thickness}>`
+  // Outline box — BX takes corners only; thickness not supported in basic BX
+  return `<BX${n(el.row)},${n(el.col)},${n(el.row + el.height)},${n(el.col + el.width)}>`
 }
 
 function compileQR(el: QRElement): string {
@@ -62,26 +62,29 @@ function compileQR(el: QRElement): string {
       if (matrix[r][c]) {
         const row = el.row + r * dotSize
         const col = el.col + c * dotSize
-        parts.push(`<bf${n4(row)},${n4(col)},${dotSize},${dotSize}>`)
+        // Each QR module = filled square via thick LH line
+        parts.push(`<LH${n(row)},${n(col)},${n(col + dotSize)},${dotSize}>`)
       }
     }
   }
   return parts.join('')
 }
 
-// FGL barcode type codes for FGL26/46
-const BARCODE_TYPE_CODES: Record<BarcodeType, string> = {
-  'code128': '9',
-  'code39': '0',
-  'upc-a': '1',
-  'ean13': '2',
-  'interleaved25': '3'
+// FGL barcode commands (lowercase = all 4 rotations)
+const BARCODE_CMDS: Record<BarcodeType, string> = {
+  'code128':       'bc',
+  'code39':        'b',
+  'upc-a':         'upc',
+  'ean13':         'e',
+  'interleaved25': 'i'
 }
 
 function compileBarcode(el: BarcodeElement): string {
-  const typeCode = BARCODE_TYPE_CODES[el.barcodeType]
-  // <bc TYPE,ROW,COL,HEIGHT,NARROW_WIDTH,WIDE_WIDTH>data
-  return `<bc${typeCode},${n4(el.row)},${n4(el.col)},${el.height},2,4>${el.content}`
+  const cmd = BARCODE_CMDS[el.barcodeType]
+  // Height in FGL barcode units (1 unit = 8 dots)
+  const heightUnits = Math.max(1, Math.round(el.height / 8))
+  // <X2> = 2× bar width (minimum for reliable scanning at high DPI)
+  return `<X2><RC${n(el.row)},${n(el.col)}><${cmd}${heightUnits}>${el.content}`
 }
 
 function compileElement(el: TicketElement): string {
@@ -96,8 +99,10 @@ function compileElement(el: TicketElement): string {
 }
 
 export function compile(doc: TicketDocument): string {
-  const parts: string[] = []
-  parts.push('<NF>')
+  if (doc.rawFglOverride !== undefined) {
+    return doc.rawFglOverride
+  }
+  const parts: string[] = ['<NF>']
   for (const el of doc.elements) {
     parts.push(compileElement(el))
   }

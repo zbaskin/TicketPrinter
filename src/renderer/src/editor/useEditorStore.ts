@@ -13,7 +13,7 @@ export interface EditorStore {
 }
 
 const INITIAL_DOCUMENT: TicketDocument = {
-  stock: 'CONCERT',
+  stock: 'CINEMA',
   elements: []
 }
 

@@ -29,7 +29,7 @@ export default function PrinterSetup({ onPrinterSelected }: PrinterSetupProps): 
     setStatus('printing')
     setErrorMsg('')
     try {
-      const result: PrintResult = await window.printerApi.print(selected, '<HEAT 10><NF><p>')
+      const result: PrintResult = await window.printerApi.print(selected, '<NF><p>')
       if (result.success) {
         setStatus('success')
       } else {
