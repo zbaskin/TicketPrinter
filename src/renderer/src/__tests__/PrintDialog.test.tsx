@@ -166,4 +166,37 @@ describe('PrintDialog', () => {
 
     expect(onClose).toHaveBeenCalledTimes(1)
   })
+
+  it('when rawFglOverride is set, byte count reflects override length not compiled length', () => {
+    const overrideFgl = 'RAW_OVERRIDE'
+    const docWithOverride: TicketDocument = { ...sampleDoc, rawFglOverride: overrideFgl }
+    render(<PrintDialog document={docWithOverride} printerName="Boca Lemur" onClose={vi.fn()} />)
+    const expectedBytes = new TextEncoder().encode(overrideFgl).length
+    expect(screen.getByText(new RegExp(`${expectedBytes} bytes`))).toBeInTheDocument()
+  })
+
+  it('when rawFglOverride is set, printerApi.print is called with the override string', async () => {
+    mockPrint.mockResolvedValue({ success: true, bytesWritten: 12 })
+    const overrideFgl = 'RAW_OVERRIDE'
+    const docWithOverride: TicketDocument = { ...sampleDoc, rawFglOverride: overrideFgl }
+    render(<PrintDialog document={docWithOverride} printerName="Boca Lemur" onClose={vi.fn()} />)
+
+    fireEvent.click(screen.getByRole('button', { name: /print/i }))
+
+    await waitFor(() => {
+      expect(mockPrint).toHaveBeenCalledWith('Boca Lemur', overrideFgl)
+    })
+  })
+
+  it('when rawFglOverride is undefined, printerApi.print is called with compile(doc) output', async () => {
+    mockPrint.mockResolvedValue({ success: true, bytesWritten: 50 })
+    render(<PrintDialog document={sampleDoc} printerName="Boca Lemur" onClose={vi.fn()} />)
+
+    fireEvent.click(screen.getByRole('button', { name: /print/i }))
+
+    await waitFor(() => {
+      const fglArg = mockPrint.mock.calls[0][1] as string
+      expect(fglArg).toContain('<HEAT 10>')
+    })
+  })
 })

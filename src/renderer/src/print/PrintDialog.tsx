@@ -28,11 +28,11 @@ export default function PrintDialog({ document: doc, printerName, onClose }: Pri
   const [printing, setPrinting] = useState<boolean>(false)
   const [copyStates, setCopyStates] = useState<CopyState[]>([])
 
-  const compiledFgl = compile(doc)
+  const compiledFgl = doc.rawFglOverride ?? compile(doc)
   const byteCount = new TextEncoder().encode(compiledFgl).length
 
   async function handlePrint(): Promise<void> {
-    const fgl = compile(doc)
+    const fgl = doc.rawFglOverride ?? compile(doc)
     const states: CopyState[] = Array.from({ length: copies }, (_, i) => ({ index: i, status: 'queued' }))
     setCopyStates(states)
     setPrinting(true)

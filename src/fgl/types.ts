@@ -71,4 +71,5 @@ export interface TicketDocument {
   customHeight?: number
   heat: number
   elements: TicketElement[]
+  rawFglOverride?: string
 }

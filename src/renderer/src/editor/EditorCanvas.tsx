@@ -1,7 +1,8 @@
+import { useRef, useState, useEffect } from 'react'
+import type { MutableRefObject } from 'react'
 import type { TicketDocument, TicketElement } from '../../../fgl/types'
 import { getStock } from '../../../fgl/stock'
-
-const SCALE = 0.15
+import { SCALE, snapToGrid, clampToStock, svgCoordsFromPointer } from './canvasUtils'
 
 interface EditorCanvasProps {
   document: TicketDocument
@@ -14,38 +15,48 @@ function ElementShape({
   el,
   index,
   selected,
-  onSelect
+  onPointerDown,
+  onDoubleClick
 }: {
   el: TicketElement
   index: number
   selected: boolean
-  onSelect: (index: number) => void
+  onPointerDown: (e: React.PointerEvent, index: number) => void
+  onDoubleClick: (e: React.MouseEvent, index: number) => void
 }): React.JSX.Element {
   const strokeColor = selected ? '#3b82f6' : '#a3e635'
-  const handleClick = (e: React.MouseEvent): void => {
-    e.stopPropagation()
-    onSelect(index)
-  }
 
   const attrs = {
     'data-element-index': index,
     'data-selected': selected ? 'true' : 'false',
-    onClick: handleClick,
-    style: { cursor: 'pointer' }
+    onPointerDown: (e: React.PointerEvent) => onPointerDown(e, index),
+    onDoubleClick: (e: React.MouseEvent) => onDoubleClick(e, index),
+    style: { cursor: 'grab' }
   }
 
   switch (el.type) {
     case 'text':
       return (
-        <text
-          {...attrs}
-          x={el.col * SCALE}
-          y={el.row * SCALE}
-          fontSize={10 * SCALE * (el.font ?? 3)}
-          fill={selected ? '#3b82f6' : '#a3e635'}
-        >
-          {el.content}
-        </text>
+        <g {...attrs}>
+          {/* Transparent hit-target rect so entire area is draggable */}
+          <rect
+            x={el.col * SCALE}
+            y={(el.row - el.font * 10) * SCALE}
+            width={el.content.length * el.font * 6 * SCALE}
+            height={el.font * 12 * SCALE}
+            fill="transparent"
+            pointerEvents="all"
+          />
+          <text
+            x={el.col * SCALE}
+            y={el.row * SCALE}
+            fontSize={10 * SCALE * (el.font ?? 3)}
+            fill={selected ? '#3b82f6' : '#a3e635'}
+            pointerEvents="none"
+          >
+            {el.content}
+          </text>
+        </g>
       )
 
     case 'hline':
@@ -112,6 +123,7 @@ function ElementShape({
             dominantBaseline="middle"
             fontSize={8}
             fill={strokeColor}
+            pointerEvents="none"
           >
             QR
           </text>
@@ -141,6 +153,7 @@ function ElementShape({
             dominantBaseline="middle"
             fontSize={8}
             fill={strokeColor}
+            pointerEvents="none"
           >
             Barcode
           </text>
@@ -150,23 +163,213 @@ function ElementShape({
   }
 }
 
+// ── Inline text edit input ────────────────────────────────────────────────────
+
+function InlineTextInput({
+  el,
+  value,
+  onChange,
+  onCommit,
+  onCancel
+}: {
+  el: TicketElement & { type: 'text' }
+  value: string
+  onChange: (v: string) => void
+  onCommit: () => void
+  onCancel: () => void
+}): React.JSX.Element {
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    inputRef.current?.focus()
+    inputRef.current?.select()
+  }, [])
+
+  return (
+    <input
+      ref={inputRef}
+      type="text"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault()
+          onCommit()
+        } else if (e.key === 'Escape') {
+          e.preventDefault()
+          onCancel()
+        }
+      }}
+      onBlur={onCommit}
+      style={{
+        position: 'absolute',
+        left: el.col * SCALE,
+        top: el.row * SCALE - el.font * 10 * SCALE,
+        fontSize: `${10 * SCALE * (el.font ?? 3) * 4}px`,
+        fontFamily: 'monospace',
+        background: 'rgba(31,41,55,0.95)',
+        color: '#a3e635',
+        border: '1px solid #3b82f6',
+        borderRadius: 2,
+        padding: '0 2px',
+        zIndex: 10,
+        minWidth: 40
+      }}
+    />
+  )
+}
+
+// ── Main EditorCanvas ─────────────────────────────────────────────────────────
+
 export default function EditorCanvas({
   document: doc,
   selectedIndex,
   onSelect,
-  onUpdateElement: _onUpdateElement
+  onUpdateElement
 }: EditorCanvasProps): React.JSX.Element {
   const stock = getStock(doc)
   const svgWidth = stock.heightDots * SCALE
   const svgHeight = stock.widthDots * SCALE
 
+  const svgRef = useRef<SVGSVGElement>(null)
+
+  // Drag state refs (non-rendering)
+  const dragIndexRef: MutableRefObject<number | null> = useRef(null)
+  const pointerDownSvgRef: MutableRefObject<{ x: number; y: number } | null> = useRef(null)
+  const elementOriginRef: MutableRefObject<{ row: number; col: number } | null> = useRef(null)
+  const pointerDownClientRef: MutableRefObject<{ x: number; y: number } | null> = useRef(null)
+
+  // Inline text edit state
+  const [editingIndex, setEditingIndex] = useState<number | null>(null)
+  const [editValue, setEditValue] = useState<string>('')
+
+  function handleElementPointerDown(e: React.PointerEvent, index: number): void {
+    e.stopPropagation()
+    const target = e.currentTarget as Element
+    if (typeof target.setPointerCapture === 'function') {
+      target.setPointerCapture(e.pointerId)
+    }
+    onSelect(index)
+
+    if (svgRef.current) {
+      const svgCoords = svgCoordsFromPointer(e.clientX, e.clientY, svgRef.current)
+      pointerDownSvgRef.current = svgCoords
+    }
+    pointerDownClientRef.current = { x: e.clientX, y: e.clientY }
+
+    const el = doc.elements[index]
+    elementOriginRef.current = { row: el.row, col: el.col }
+    dragIndexRef.current = index
+  }
+
+  function handleDoubleClick(e: React.MouseEvent, index: number): void {
+    e.stopPropagation()
+    const el = doc.elements[index]
+    if (el.type === 'text') {
+      setEditingIndex(index)
+      setEditValue(el.content)
+    }
+  }
+
+  function handleSvgPointerDown(e: React.PointerEvent): void {
+    // Only deselect if clicking directly on SVG (not on a child element that stopped propagation)
+    onSelect(-1)
+  }
+
+  function handleSvgPointerMove(e: React.PointerEvent): void {
+    if (dragIndexRef.current === null || pointerDownSvgRef.current === null || elementOriginRef.current === null) {
+      return
+    }
+    if (!svgRef.current) return
+
+    const currentSvg = svgCoordsFromPointer(e.clientX, e.clientY, svgRef.current)
+    const dx = currentSvg.x - pointerDownSvgRef.current.x
+    const dy = currentSvg.y - pointerDownSvgRef.current.y
+
+    const newRow = elementOriginRef.current.row + dy / SCALE
+    const newCol = elementOriginRef.current.col + dx / SCALE
+
+    const clamped = clampToStock(newRow, newCol, stock)
+
+    const el = doc.elements[dragIndexRef.current]
+    onUpdateElement(dragIndexRef.current, { ...el, row: clamped.row, col: clamped.col })
+  }
+
+  function handleSvgPointerUp(e: React.PointerEvent): void {
+    if (dragIndexRef.current === null) return
+
+    const pdc = pointerDownClientRef.current
+    if (pdc) {
+      const dx = e.clientX - pdc.x
+      const dy = e.clientY - pdc.y
+      const dist = Math.sqrt(dx * dx + dy * dy)
+
+      if (dist < 3) {
+        // Click — restore original position (no update needed, no move happened)
+        // Just clear refs
+      } else {
+        // Drag — snap final position to grid
+        if (!svgRef.current || !elementOriginRef.current) {
+          dragIndexRef.current = null
+          pointerDownSvgRef.current = null
+          elementOriginRef.current = null
+          pointerDownClientRef.current = null
+          return
+        }
+
+        const currentSvg = svgCoordsFromPointer(e.clientX, e.clientY, svgRef.current)
+        const dxSvg = currentSvg.x - pointerDownSvgRef.current!.x
+        const dySvg = currentSvg.y - pointerDownSvgRef.current!.y
+
+        const rawRow = elementOriginRef.current.row + dySvg / SCALE
+        const rawCol = elementOriginRef.current.col + dxSvg / SCALE
+
+        const clamped = clampToStock(rawRow, rawCol, stock)
+        const snappedRow = snapToGrid(clamped.row)
+        const snappedCol = snapToGrid(clamped.col)
+
+        const el = doc.elements[dragIndexRef.current]
+        onUpdateElement(dragIndexRef.current, { ...el, row: snappedRow, col: snappedCol })
+      }
+    }
+
+    dragIndexRef.current = null
+    pointerDownSvgRef.current = null
+    elementOriginRef.current = null
+    pointerDownClientRef.current = null
+  }
+
+  function commitEdit(): void {
+    if (editingIndex === null) return
+    const el = doc.elements[editingIndex]
+    if (el.type === 'text') {
+      onUpdateElement(editingIndex, { ...el, content: editValue })
+    }
+    setEditingIndex(null)
+  }
+
+  function cancelEdit(): void {
+    setEditingIndex(null)
+  }
+
+  const editingEl =
+    editingIndex !== null && doc.elements[editingIndex]?.type === 'text'
+      ? (doc.elements[editingIndex] as TicketElement & { type: 'text' })
+      : null
+
   return (
-    <div className="overflow-auto bg-gray-800 rounded-lg p-2 flex-1 flex items-center justify-center">
+    <div
+      className="overflow-auto bg-gray-800 rounded-lg p-2 flex-1 flex items-center justify-center"
+      style={{ position: 'relative' }}
+    >
       <svg
+        ref={svgRef}
         width={svgWidth}
         height={svgHeight}
-        style={{ background: '#1f2937', display: 'block' }}
-        onClick={() => onSelect(-1)}
+        style={{ background: '#1f2937', display: 'block', overflow: 'visible' }}
+        onPointerDown={handleSvgPointerDown}
+        onPointerMove={handleSvgPointerMove}
+        onPointerUp={handleSvgPointerUp}
       >
         {/* Stock boundary */}
         <rect
@@ -215,10 +418,22 @@ export default function EditorCanvas({
             el={el}
             index={i}
             selected={selectedIndex === i}
-            onSelect={onSelect}
+            onPointerDown={handleElementPointerDown}
+            onDoubleClick={handleDoubleClick}
           />
         ))}
       </svg>
+
+      {/* Inline text edit input */}
+      {editingEl !== null && (
+        <InlineTextInput
+          el={editingEl}
+          value={editValue}
+          onChange={setEditValue}
+          onCommit={commitEdit}
+          onCancel={cancelEdit}
+        />
+      )}
     </div>
   )
 }

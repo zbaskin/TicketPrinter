@@ -9,6 +9,7 @@ export interface EditorStore {
   updateElement: (index: number, el: TicketElement) => void
   removeElement: (index: number) => void
   selectElement: (index: number | null) => void
+  setRawFgl: (fgl: string | null) => void
 }
 
 const INITIAL_DOCUMENT: TicketDocument = {
@@ -28,6 +29,7 @@ export function useEditorStore(): EditorStore {
   function addElement(el: TicketElement): void {
     setDocumentState((prev) => ({
       ...prev,
+      rawFglOverride: undefined,
       elements: [...prev.elements, el]
     }))
   }
@@ -35,6 +37,7 @@ export function useEditorStore(): EditorStore {
   function updateElement(index: number, el: TicketElement): void {
     setDocumentState((prev) => ({
       ...prev,
+      rawFglOverride: undefined,
       elements: prev.elements.map((existing, i) => (i === index ? el : existing))
     }))
   }
@@ -42,7 +45,15 @@ export function useEditorStore(): EditorStore {
   function removeElement(index: number): void {
     setDocumentState((prev) => ({
       ...prev,
+      rawFglOverride: undefined,
       elements: prev.elements.filter((_, i) => i !== index)
+    }))
+  }
+
+  function setRawFgl(fgl: string | null): void {
+    setDocumentState((prev) => ({
+      ...prev,
+      rawFglOverride: fgl ?? undefined
     }))
   }
 
@@ -57,6 +68,7 @@ export function useEditorStore(): EditorStore {
     addElement,
     updateElement,
     removeElement,
-    selectElement
+    selectElement,
+    setRawFgl
   }
 }

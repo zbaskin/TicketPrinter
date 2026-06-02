@@ -56,4 +56,33 @@ describe('TicketEditor', () => {
     const printBtn = screen.getByRole('button', { name: /print/i })
     expect(printBtn).not.toBeDisabled()
   })
+
+  it('"Visual" and "FGL" toggle buttons are present', () => {
+    render(<TicketEditor />)
+    expect(screen.getByRole('button', { name: /^visual$/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^fgl$/i })).toBeInTheDocument()
+  })
+
+  it('default mode is "visual" (palette visible)', () => {
+    render(<TicketEditor />)
+    // ElementPalette is visible by default
+    expect(screen.getByRole('button', { name: /text/i })).toBeInTheDocument()
+  })
+
+  it('clicking "FGL" shows FglEditorPanel, hides palette', () => {
+    render(<TicketEditor />)
+    fireEvent.click(screen.getByRole('button', { name: /^fgl$/i }))
+    // FglEditorPanel has a textarea
+    expect(screen.getByRole('textbox')).toBeInTheDocument()
+    // ElementPalette palette buttons should NOT be visible
+    expect(screen.queryByRole('button', { name: /^text$/i })).toBeNull()
+  })
+
+  it('clicking "Visual" after "FGL" restores palette', () => {
+    render(<TicketEditor />)
+    fireEvent.click(screen.getByRole('button', { name: /^fgl$/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^visual$/i }))
+    expect(screen.getByRole('button', { name: /text/i })).toBeInTheDocument()
+    expect(screen.queryByRole('textbox')).toBeNull()
+  })
 })

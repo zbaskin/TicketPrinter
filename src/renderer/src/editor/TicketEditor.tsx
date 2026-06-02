@@ -4,12 +4,14 @@ import EditorCanvas from './EditorCanvas'
 import ElementPalette from './ElementPalette'
 import PropertiesPanel from './PropertiesPanel'
 import FglSourcePanel from './FglSourcePanel'
+import FglEditorPanel from './FglEditorPanel'
 import PrintDialog from '../print/PrintDialog'
 import type { StockId } from '../../../fgl/types'
 
 export default function TicketEditor(): React.JSX.Element {
   const store = useEditorStore()
   const [showPrintDialog, setShowPrintDialog] = useState(false)
+  const [editorMode, setEditorMode] = useState<'visual' | 'fgl'>('visual')
 
   const selectedPrinter = localStorage.getItem('selectedPrinter') ?? ''
   const canPrint = Boolean(selectedPrinter)
@@ -36,6 +38,26 @@ export default function TicketEditor(): React.JSX.Element {
           <option value="custom">Custom</option>
         </select>
 
+        {/* Visual / FGL mode toggle */}
+        <div className="flex rounded overflow-hidden border border-gray-700">
+          <button
+            onClick={() => setEditorMode('visual')}
+            className={`px-3 py-1 text-xs font-medium transition-colors ${editorMode === 'visual' ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-white'}`}
+          >
+            Visual
+          </button>
+          <button
+            onClick={() => setEditorMode('fgl')}
+            className={`px-3 py-1 text-xs font-medium transition-colors ${editorMode === 'fgl' ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-white'}`}
+          >
+            FGL
+          </button>
+        </div>
+
+        {store.document.rawFglOverride !== undefined && editorMode === 'visual' && (
+          <span className="text-xs text-yellow-400 font-medium">FGL override active</span>
+        )}
+
         <div className="flex-1" />
 
         <button
@@ -49,42 +71,54 @@ export default function TicketEditor(): React.JSX.Element {
 
       {/* Main layout */}
       <div className="flex flex-1 gap-2 min-h-0">
-        {/* Left: Element palette */}
-        <ElementPalette onAddElement={store.addElement} />
+        {editorMode === 'visual' ? (
+          <>
+            {/* Left: Element palette */}
+            <ElementPalette onAddElement={store.addElement} />
 
-        {/* Center: Canvas */}
-        <EditorCanvas
-          document={store.document}
-          selectedIndex={store.selectedIndex}
-          onSelect={(idx) => {
-            if (idx < 0) {
-              store.selectElement(null)
-            } else {
-              store.selectElement(idx)
-            }
-          }}
-          onUpdateElement={store.updateElement}
-        />
-
-        {/* Right: Properties + FGL source */}
-        <div className="w-72 shrink-0 flex flex-col gap-2 overflow-hidden">
-          <div className="flex-1 bg-gray-900 border border-gray-700 rounded-lg overflow-hidden">
-            <div className="px-3 py-2 text-xs font-semibold text-gray-400 border-b border-gray-800">
-              Properties
-            </div>
-            <PropertiesPanel
+            {/* Center: Canvas */}
+            <EditorCanvas
               document={store.document}
               selectedIndex={store.selectedIndex}
-              onUpdateElement={store.updateElement}
-              onRemoveElement={(idx) => {
-                store.removeElement(idx)
-                store.selectElement(null)
+              onSelect={(idx) => {
+                if (idx < 0) {
+                  store.selectElement(null)
+                } else {
+                  store.selectElement(idx)
+                }
               }}
+              onUpdateElement={store.updateElement}
+            />
+
+            {/* Right: Properties + FGL source */}
+            <div className="w-72 shrink-0 flex flex-col gap-2 overflow-hidden">
+              <div className="flex-1 bg-gray-900 border border-gray-700 rounded-lg overflow-hidden">
+                <div className="px-3 py-2 text-xs font-semibold text-gray-400 border-b border-gray-800">
+                  Properties
+                </div>
+                <PropertiesPanel
+                  document={store.document}
+                  selectedIndex={store.selectedIndex}
+                  onUpdateElement={store.updateElement}
+                  onRemoveElement={(idx) => {
+                    store.removeElement(idx)
+                    store.selectElement(null)
+                  }}
+                />
+              </div>
+
+              <FglSourcePanel document={store.document} />
+            </div>
+          </>
+        ) : (
+          <div className="flex-1 bg-gray-900 border border-gray-700 rounded-lg overflow-hidden">
+            <FglEditorPanel
+              document={store.document}
+              onApply={(fgl) => store.setRawFgl(fgl)}
+              onRevert={() => store.setRawFgl(null)}
             />
           </div>
-
-          <FglSourcePanel document={store.document} />
-        </div>
+        )}
       </div>
 
       {showPrintDialog && canPrint && (

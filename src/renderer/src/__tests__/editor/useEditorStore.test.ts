@@ -133,4 +133,58 @@ describe('useEditorStore', () => {
     expect(result.current.document.stock).toBe('CINEMA')
     expect(result.current.document.elements).toHaveLength(1)
   })
+
+  it('setRawFgl sets document.rawFglOverride to the given string', () => {
+    const { result } = renderHook(() => useEditorStore())
+    act(() => {
+      result.current.setRawFgl('<HEAT 5><NF><p>')
+    })
+    expect(result.current.document.rawFglOverride).toBe('<HEAT 5><NF><p>')
+  })
+
+  it('setRawFgl(null) clears rawFglOverride', () => {
+    const { result } = renderHook(() => useEditorStore())
+    act(() => {
+      result.current.setRawFgl('<HEAT 5><NF><p>')
+    })
+    act(() => {
+      result.current.setRawFgl(null)
+    })
+    expect(result.current.document.rawFglOverride).toBeUndefined()
+  })
+
+  it('addElement after setRawFgl clears the override', () => {
+    const { result } = renderHook(() => useEditorStore())
+    act(() => {
+      result.current.setRawFgl('<HEAT 5><NF><p>')
+    })
+    act(() => {
+      result.current.addElement(sampleText)
+    })
+    expect(result.current.document.rawFglOverride).toBeUndefined()
+  })
+
+  it('updateElement clears rawFglOverride', () => {
+    const { result } = renderHook(() => useEditorStore())
+    act(() => {
+      result.current.addElement(sampleText)
+      result.current.setRawFgl('<HEAT 5><NF><p>')
+    })
+    act(() => {
+      result.current.updateElement(0, { ...sampleText, content: 'Changed' })
+    })
+    expect(result.current.document.rawFglOverride).toBeUndefined()
+  })
+
+  it('removeElement clears rawFglOverride', () => {
+    const { result } = renderHook(() => useEditorStore())
+    act(() => {
+      result.current.addElement(sampleText)
+      result.current.setRawFgl('<HEAT 5><NF><p>')
+    })
+    act(() => {
+      result.current.removeElement(0)
+    })
+    expect(result.current.document.rawFglOverride).toBeUndefined()
+  })
 })
