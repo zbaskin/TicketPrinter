@@ -35,7 +35,7 @@ vi.mock('util', () => ({
 }))
 
 // Import AFTER mocks
-import { listPrinters, printRaw } from '../printer'
+import { listPrinters, printRaw, queryPrinter } from '../printer'
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -157,5 +157,94 @@ describe('printRaw', () => {
     const result = await printRaw('Boca Lemur', '<HEAT 10><NF><p>')
     expect(result.success).toBe(false)
     expect(result.error).toBe('plain string error')
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// queryPrinter
+// ─────────────────────────────────────────────────────────────────────────────
+describe('queryPrinter', () => {
+  it('success: parses SENT and RESP hex from stdout', async () => {
+    mocks.exec.mockResolvedValueOnce({
+      stdout: 'SENT:48454C4C4F\nRESP:06\n',
+      stderr: ''
+    })
+    const result = await queryPrinter('Boca Lemur', '<S1>')
+    expect(result.sent).toBe('48454C4C4F')
+    expect(result.responseHex).toBe('06')
+    // 0x06 is non-printable ASCII, should render as '.'
+    expect(result.responseText).toBe('.')
+    expect(result.error).toBeUndefined()
+  })
+
+  it('READERR: sets error field, responseHex is empty', async () => {
+    mocks.exec.mockResolvedValueOnce({
+      stdout: 'SENT:533131\nRESP:\nREADERR:5\n',
+      stderr: ''
+    })
+    const result = await queryPrinter('Boca Lemur', '<S11>')
+    expect(result.sent).toBe('533131')
+    expect(result.responseHex).toBe('')
+    expect(result.error).toBe('5')
+  })
+
+  it('exec throws: returns error message with empty sent/responseHex', async () => {
+    mocks.exec.mockRejectedValueOnce(new Error('PowerShell crashed'))
+    const result = await queryPrinter('Boca Lemur', '<S1>')
+    expect(result.sent).toBe('')
+    expect(result.responseHex).toBe('')
+    expect(result.responseText).toBe('')
+    expect(result.error).toBe('PowerShell crashed')
+  })
+
+  it('always unlinks the temp file on success', async () => {
+    mocks.exec.mockResolvedValueOnce({ stdout: 'SENT:41\nRESP:06\n', stderr: '' })
+    await queryPrinter('Boca Lemur', '<S1>')
+    expect(mocks.unlink).toHaveBeenCalledWith(expect.stringContaining('.fgl'))
+  })
+
+  it('always unlinks the temp file when exec throws', async () => {
+    mocks.exec.mockRejectedValueOnce(new Error('crash'))
+    await queryPrinter('Boca Lemur', '<S1>')
+    expect(mocks.unlink).toHaveBeenCalledWith(expect.stringContaining('.fgl'))
+  })
+
+  it('script path includes query-printer.ps1', async () => {
+    mocks.exec.mockResolvedValueOnce({ stdout: 'SENT:41\nRESP:\n', stderr: '' })
+    await queryPrinter('Boca Lemur', '<S1>')
+    const execCall = mocks.exec.mock.calls[0][0] as string
+    expect(execCall).toContain('query-printer.ps1')
+  })
+
+  it('passes -PrinterName and -DataPath args to the script', async () => {
+    mocks.exec.mockResolvedValueOnce({ stdout: 'SENT:41\nRESP:\n', stderr: '' })
+    await queryPrinter('My Printer', '<S1>')
+    const execCall = mocks.exec.mock.calls[0][0] as string
+    expect(execCall).toContain('-PrinterName "My Printer"')
+    expect(execCall).toContain('-DataPath')
+  })
+
+  it('writes command to a temp .fgl file with ascii encoding', async () => {
+    mocks.exec.mockResolvedValueOnce({ stdout: 'SENT:41\nRESP:\n', stderr: '' })
+    await queryPrinter('Boca Lemur', '<S8>')
+    expect(mocks.writeFile).toHaveBeenCalledWith(
+      expect.stringContaining('.fgl'),
+      '<S8>',
+      'ascii'
+    )
+  })
+
+  it('converts multi-byte RESP hex to printable responseText, non-printable as dot', async () => {
+    // 0x41 = 'A' (printable), 0x06 = ACK (non-printable)
+    mocks.exec.mockResolvedValueOnce({ stdout: 'SENT:00\nRESP:4106\n', stderr: '' })
+    const result = await queryPrinter('Boca Lemur', '<S1>')
+    expect(result.responseText).toBe('A.')
+  })
+
+  it('returns empty responseText when RESP is empty', async () => {
+    mocks.exec.mockResolvedValueOnce({ stdout: 'SENT:41\nRESP:\n', stderr: '' })
+    const result = await queryPrinter('Boca Lemur', '<S1>')
+    expect(result.responseText).toBe('')
+    expect(result.responseHex).toBe('')
   })
 })

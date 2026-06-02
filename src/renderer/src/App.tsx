@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import PrinterSetup from './settings/PrinterSetup'
 import TicketEditor from './editor/TicketEditor'
+import PrinterConsole from './console/PrinterConsole'
 import type { } from '../../fgl/types'
 
-type Tab = 'setup' | 'editor'
+type Tab = 'setup' | 'editor' | 'console'
 
 export default function App(): React.JSX.Element {
   const [tab, setTab] = useState<Tab>('setup')
@@ -21,7 +22,7 @@ export default function App(): React.JSX.Element {
       </header>
 
       <nav className="border-b border-gray-800 px-6 flex gap-1">
-        {(['setup', 'editor'] as Tab[]).map((t) => (
+        {(['setup', 'editor', 'console'] as Tab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -31,7 +32,7 @@ export default function App(): React.JSX.Element {
                 : 'border-transparent text-gray-400 hover:text-gray-200'
             }`}
           >
-            {t === 'editor' ? 'Editor' : 'Printer Setup'}
+            {t === 'editor' ? 'Editor' : t === 'console' ? 'Console' : 'Printer Setup'}
           </button>
         ))}
       </nav>
@@ -44,6 +45,9 @@ export default function App(): React.JSX.Element {
         )}
         {tab === 'editor' && (
           <TicketEditor />
+        )}
+        {tab === 'console' && (
+          <PrinterConsole printerName={selectedPrinter} />
         )}
       </main>
     </div>
