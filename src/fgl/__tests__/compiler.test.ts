@@ -112,3 +112,102 @@ describe('compile', () => {
     expect(result).not.toContain('<rte>')
   })
 })
+
+const cinema: TicketDocument = { stock: 'CINEMA', elements: [] }
+
+describe('compile CINEMA coordinate swap', () => {
+  // CINEMA physical: FGL row = horizontal (3.25" = 0-1950), FGL col = vertical (2" = 0-1200).
+  // Canvas: col = horizontal, row = vertical.
+  // Transform: new_row = canvas_col, new_col = canvas_row (simple swap, no inversion).
+  // Text gains 90° CW rotation (<RR>) so characters advance left-to-right.
+
+  it('swaps text position and adds CCW rotation (<RL>)', () => {
+    // (row=100, col=200) → new_row=200, new_col=100; rotation 0→270 (<RL>)
+    const result = compile({
+      ...cinema,
+      elements: [{ type: 'text', row: 100, col: 200, font: 1, content: 'Hello' }]
+    })
+    expect(result).toContain('<RC200,100>')
+    expect(result).toContain('<RL>')
+    expect(result).toContain('<NR>')
+    expect(result).not.toContain('<RR>')
+  })
+
+  it('combines text rotation correctly: 90 + 270 = 0 (no rotation cmd)', () => {
+    // 90 + 270 = 360 = 0 → no rotation command emitted
+    const result = compile({
+      ...cinema,
+      elements: [{ type: 'text', row: 50, col: 100, font: 2, rotation: 90, content: 'X' }]
+    })
+    expect(result).toContain('<RC100,50>')
+    expect(result).not.toContain('<RR>')
+    expect(result).not.toContain('<RL>')
+    expect(result).not.toContain('<NR>')
+  })
+
+  it('transforms hline into vline: new_row=col, new_col=row, height=length', () => {
+    // hline (row=200, col=100, length=500) → vline(row=100, col=200, height=500)
+    // VLine FGL: <LV col, rowStart, rowEnd, thickness> = <LV200,100,600,1>
+    const result = compile({
+      ...cinema,
+      elements: [{ type: 'hline', row: 200, col: 100, length: 500, thickness: 1 }]
+    })
+    expect(result).toContain('<LV200,100,600,1>')
+  })
+
+  it('transforms vline into hline: new_row=col, new_col=row, length=height', () => {
+    // vline (row=100, col=300, height=400) → hline(row=300, col=100, length=400)
+    // HLine FGL: <LH row, colStart, colEnd, thickness> = <LH300,100,500,1>
+    const result = compile({
+      ...cinema,
+      elements: [{ type: 'vline', row: 100, col: 300, height: 400, thickness: 1 }]
+    })
+    expect(result).toContain('<LH300,100,500,1>')
+  })
+
+  it('transforms outline box: swaps row/col and width/height', () => {
+    // box (row=50, col=50, width=200, height=100) → row=50, col=50, width=100, height=200
+    // BX: <BX row,col,row+height,col+width> = <BX50,50,250,150>
+    const result = compile({
+      ...cinema,
+      elements: [{ type: 'box', row: 50, col: 50, width: 200, height: 100, thickness: 1 }]
+    })
+    expect(result).toContain('<BX50,50,250,150>')
+  })
+
+  it('transforms filled box: swaps row/col and width/height', () => {
+    // box fill=true (row=50, col=50, width=200, height=100) → row=50, col=50, width=100, height=200
+    // LH: <LH row,col,col+width,height> = <LH50,50,150,200>
+    const result = compile({
+      ...cinema,
+      elements: [{ type: 'box', row: 50, col: 50, width: 200, height: 100, thickness: 1, fill: true }]
+    })
+    expect(result).toContain('<LH50,50,150,200>')
+  })
+
+  it('transforms QR dot positions by swapping physRow and physCol', () => {
+    // QR at (row=0, col=0, dotSize=6): dot (r,c) → LH at (c*6, r*6, r*6+6, 6)
+    // All LH row values should be multiples of dotSize (= col positions of original dots)
+    const result = compile({
+      ...cinema,
+      elements: [{ type: 'qr', row: 0, col: 0, content: 'A', dotSize: 6 }]
+    })
+    const lhMatches = [...result.matchAll(/<LH(\d+),(\d+),(\d+),6>/g)]
+    expect(lhMatches.length).toBeGreaterThan(0)
+    for (const m of lhMatches) {
+      // row values come from original col positions (multiples of dotSize from el.col=0)
+      expect(parseInt(m[1]) % 6).toBe(0)
+    }
+  })
+
+  it('does not affect CONCERT elements', () => {
+    const result = compile({
+      ...base,
+      elements: [{ type: 'text', row: 100, col: 200, font: 1, content: 'Test' }]
+    })
+    expect(result).toContain('<RC100,200>')
+    expect(result).not.toContain('<RR>')
+    expect(result).not.toContain('<RL>')
+    expect(result).not.toContain('<NR>')
+  })
+})
