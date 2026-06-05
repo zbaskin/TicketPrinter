@@ -24,3 +24,20 @@ export interface IpcPrinterApi {
   print: (connection: PrinterConnection, fglData: string) => Promise<PrintResult>
   query: (connection: PrinterConnection, command: string) => Promise<QueryResult>
 }
+
+export interface SaveLayoutResult {
+  success: boolean
+  path?: string
+  error?: string
+}
+
+export interface OpenLayoutResult {
+  success: boolean
+  document?: import('../fgl/types').TicketDocument
+  error?: string
+}
+
+export interface IpcLayoutApi {
+  save: (document: import('../fgl/types').TicketDocument) => Promise<SaveLayoutResult>
+  open: () => Promise<OpenLayoutResult>
+}

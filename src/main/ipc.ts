@@ -1,7 +1,9 @@
 import { ipcMain } from 'electron'
 import { listPrinters, printRaw, queryPrinter } from './printer'
 import { printRawTcp, queryPrinterTcp } from './tcpPrinter'
+import { saveLayout, openLayout } from './layout'
 import type { PrinterConnection } from '../shared/types'
+import type { TicketDocument } from '../fgl/types'
 
 export function registerIpcHandlers(): void {
   ipcMain.handle('printer:list', async (): Promise<string[]> => {
@@ -23,4 +25,12 @@ export function registerIpcHandlers(): void {
       return queryPrinterTcp(connection.host, connection.port, command)
     }
   )
+
+  ipcMain.handle('layout:save', async (_, document: TicketDocument) => {
+    return saveLayout(document)
+  })
+
+  ipcMain.handle('layout:open', async () => {
+    return openLayout()
+  })
 }

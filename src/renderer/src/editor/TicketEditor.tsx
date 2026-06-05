@@ -25,6 +25,7 @@ export default function TicketEditor(): React.JSX.Element {
   const [showBatchPanel, setShowBatchPanel] = useState(false)
   const [editorMode, setEditorMode] = useState<'visual' | 'fgl'>('visual')
   const [zoom, setZoom] = useState(1.5)
+  const [layoutMsg, setLayoutMsg] = useState<{ text: string; ok: boolean } | null>(null)
 
   function zoomIn(): void { setZoom(z => Math.min(4, Math.round((z + 0.25) * 100) / 100)) }
   function zoomOut(): void { setZoom(z => Math.max(0.5, Math.round((z - 0.25) * 100) / 100)) }
@@ -34,6 +35,30 @@ export default function TicketEditor(): React.JSX.Element {
 
   function handleStockChange(e: React.ChangeEvent<HTMLSelectElement>): void {
     store.setDocument({ ...store.document, stock: e.target.value as StockId })
+  }
+
+  function showMsg(text: string, ok: boolean): void {
+    setLayoutMsg({ text, ok })
+    setTimeout(() => setLayoutMsg(null), 3000)
+  }
+
+  async function handleSaveLayout(): Promise<void> {
+    const result = await window.layoutApi.save(store.document)
+    if (result.success) {
+      showMsg('Layout saved', true)
+    } else if (result.error) {
+      showMsg(result.error, false)
+    }
+  }
+
+  async function handleOpenLayout(): Promise<void> {
+    const result = await window.layoutApi.open()
+    if (result.success && result.document) {
+      store.setDocument(result.document)
+      showMsg('Layout loaded', true)
+    } else if (result.error) {
+      showMsg(result.error, false)
+    }
   }
 
   return (
@@ -100,6 +125,20 @@ export default function TicketEditor(): React.JSX.Element {
         </div>
 
         <button
+          onClick={() => void handleOpenLayout()}
+          className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white text-xs font-medium rounded transition-colors"
+        >
+          Open Layout
+        </button>
+
+        <button
+          onClick={() => void handleSaveLayout()}
+          className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white text-xs font-medium rounded transition-colors"
+        >
+          Save Layout
+        </button>
+
+        <button
           onClick={() => setShowBatchPanel(true)}
           className="px-3 py-1 bg-purple-700 hover:bg-purple-600 text-white text-xs font-medium rounded transition-colors"
         >
@@ -113,6 +152,12 @@ export default function TicketEditor(): React.JSX.Element {
         >
           Print
         </button>
+
+        {layoutMsg && (
+          <span className={`text-xs font-medium ${layoutMsg.ok ? 'text-green-400' : 'text-red-400'}`}>
+            {layoutMsg.text}
+          </span>
+        )}
       </div>
 
       {/* Main layout */}
