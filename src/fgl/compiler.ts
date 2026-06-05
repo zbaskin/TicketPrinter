@@ -27,6 +27,24 @@ const ROTATION_CMDS: Record<number, string> = {
 // FGL col = vertical (2" feed axis, 0-1200).
 // Canvas uses the opposite convention (canvas col = horizontal, canvas row = vertical),
 // so all coordinates must be swapped: FGL_row = canvas_col, FGL_col = canvas_row.
+//
+// PRINTER CONFIGURATION NOTE (CINEMA stock):
+// All compiler tests pass and the generated FGL commands are correct. If the physical
+// printout shows content offset (e.g. top-left of canvas prints halfway down the ticket,
+// or bottom-edge content wraps to the previous ticket), the cause is the printer's
+// "Top of Form" (TOF) offset, not a software bug.
+//
+// Diagnosis: the FGL coordinate origin (row=0, col=0) must correspond to the physical
+// top-left corner of the 3.25"×2" CINEMA ticket. If it does not, the printer firmware's
+// TOF is set to a non-zero value. Visual elements that appear "blank" are almost certainly
+// printing outside the visible ticket area for the same reason — the compiler generates
+// syntactically correct <LV>, <LH>, and <BX> commands.
+//
+// Fix: on the physical Boca printer, reset the CINEMA form's Top of Form offset to 0
+// (typically via the printer control panel or Boca printer utility). The form length
+// should be set to match the stock's 2" feed axis: 1200 dots at 600 DPI.
+// Do NOT attempt to compensate for this offset in FGL code without first confirming
+// the printer model and its FGL spec.
 
 function compileText(el: TextElement): string {
   const font = `<F${el.font}>`

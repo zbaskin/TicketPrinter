@@ -2,6 +2,8 @@ import { useState, useRef, useEffect } from 'react'
 import { decodeS1, firstByteFromHex } from '../../../fgl/status'
 import type { QueryResult } from '../../../shared/types'
 import type { S1Status } from '../../../fgl/status'
+import type { PrinterConnection } from '../../../shared/types'
+import { connectionLabel } from '../../../shared/types'
 
 interface LogEntry {
   id: number
@@ -13,7 +15,7 @@ interface LogEntry {
 }
 
 interface PrinterConsoleProps {
-  printerName: string
+  connection: PrinterConnection | null
 }
 
 const QUICK_COMMANDS = ['<S1>', '<S8>', '<S11>', '<S99>', '<NF><bf0050,0050,1000,0800><p>'] as const
@@ -41,14 +43,13 @@ function StatusField({ label, value }: StatusFieldProps): React.JSX.Element {
   )
 }
 
-export default function PrinterConsole({ printerName }: PrinterConsoleProps): React.JSX.Element {
+export default function PrinterConsole({ connection }: PrinterConsoleProps): React.JSX.Element {
   const [command, setCommand] = useState('')
   const [log, setLog] = useState<LogEntry[]>([])
   const [sending, setSending] = useState(false)
   const nextId = useRef(1)
   const logEndRef = useRef<HTMLDivElement>(null)
 
-  // Auto-scroll to bottom when new entries arrive
   useEffect(() => {
     if (logEndRef.current && typeof logEndRef.current.scrollIntoView === 'function') {
       logEndRef.current.scrollIntoView({ behavior: 'smooth' })
@@ -56,19 +57,18 @@ export default function PrinterConsole({ printerName }: PrinterConsoleProps): Re
   }, [log])
 
   async function sendCommand(cmd: string): Promise<void> {
-    if (!printerName || !cmd.trim() || sending) return
+    if (!connection || !cmd.trim() || sending) return
     setSending(true)
     const timestamp = formatTime(new Date())
     const entryId = nextId.current++
 
-    // Add a pending entry immediately so the user sees something happened
     setLog((prev) => [
       ...prev,
       { id: entryId, timestamp, command: cmd, result: { sent: '', responseHex: '', responseText: '' }, pending: true }
     ])
 
     try {
-      const result = await window.printerApi.query(printerName, cmd)
+      const result = await window.printerApi.query(connection, cmd)
       const decoded =
         cmd === '<S1>' && result.responseHex
           ? decodeS1(firstByteFromHex(result.responseHex) ?? 0)
@@ -100,14 +100,12 @@ export default function PrinterConsole({ printerName }: PrinterConsoleProps): Re
 
   return (
     <div className="flex flex-col gap-3 h-full">
-      {/* No-printer banner */}
-      {!printerName && (
+      {!connection && (
         <div className="flex items-center justify-center py-3 text-gray-500 font-mono text-sm bg-gray-900/50 rounded-lg border border-gray-800">
           Select a printer in Printer Setup to use the console
         </div>
       )}
 
-      {/* Input row */}
       <div className="flex gap-2">
         <input
           type="text"
@@ -120,20 +118,19 @@ export default function PrinterConsole({ printerName }: PrinterConsoleProps): Re
         />
         <button
           onClick={handleSend}
-          disabled={!printerName || sending}
+          disabled={!connection || sending}
           className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed text-white text-sm font-medium rounded-md transition-colors"
         >
           Send
         </button>
       </div>
 
-      {/* Quick buttons row */}
       <div className="flex gap-2 flex-wrap">
         {QUICK_COMMANDS.map((cmd) => (
           <button
             key={cmd}
             onClick={() => void sendCommand(cmd)}
-            disabled={!printerName || sending}
+            disabled={!connection || sending}
             className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-gray-200 text-xs font-mono rounded-md transition-colors border border-gray-700"
           >
             {cmd}
@@ -141,7 +138,12 @@ export default function PrinterConsole({ printerName }: PrinterConsoleProps): Re
         ))}
       </div>
 
-      {/* Log */}
+      {connection && (
+        <p className="text-xs text-gray-500 font-mono">
+          Connected to: {connectionLabel(connection)}
+        </p>
+      )}
+
       <div className="flex-1 overflow-y-auto bg-gray-950 border border-gray-800 rounded-lg p-3 space-y-3 min-h-0">
         {log.length === 0 && (
           <p className="text-gray-600 text-xs font-mono">No queries sent yet.</p>
@@ -157,7 +159,6 @@ export default function PrinterConsole({ printerName }: PrinterConsoleProps): Re
               <p className="text-gray-500 text-xs font-mono animate-pulse">Waiting for response…</p>
             ) : (
               <>
-                {/* Always show sent byte count so we can confirm write succeeded */}
                 {entry.result.sent ? (
                   <p className="text-green-600 text-xs font-mono mb-1">
                     ✓ Sent {entry.result.sent.length / 2} bytes to printer
@@ -166,7 +167,6 @@ export default function PrinterConsole({ printerName }: PrinterConsoleProps): Re
                   <p className="text-red-400 text-xs font-mono mb-1">✗ Send failed — command not written</p>
                 )}
 
-                {/* Response or read-error explanation */}
                 {entry.result.responseHex ? (
                   <>
                     <div className="text-xs font-mono">

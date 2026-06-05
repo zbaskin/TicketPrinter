@@ -11,8 +11,16 @@ export interface QueryResult {
   error?: string
 }
 
+export type PrinterConnection =
+  | { type: 'usb'; printerName: string }
+  | { type: 'ethernet'; host: string; port: number }
+
+export function connectionLabel(c: PrinterConnection): string {
+  return c.type === 'usb' ? c.printerName : `${c.host}:${c.port}`
+}
+
 export interface IpcPrinterApi {
   listPrinters: () => Promise<string[]>
-  print: (printerName: string, fglData: string) => Promise<PrintResult>
-  query: (printerName: string, command: string) => Promise<QueryResult>
+  print: (connection: PrinterConnection, fglData: string) => Promise<PrintResult>
+  query: (connection: PrinterConnection, command: string) => Promise<QueryResult>
 }

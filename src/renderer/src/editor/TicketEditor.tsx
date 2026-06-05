@@ -8,15 +8,29 @@ import FglEditorPanel from './FglEditorPanel'
 import PrintDialog from '../print/PrintDialog'
 import BatchPrintPanel from '../batch/BatchPrintPanel'
 import type { StockId } from '../../../fgl/types'
+import type { PrinterConnection } from '../../../shared/types'
+
+function loadStoredConnection(): PrinterConnection | null {
+  try {
+    const stored = localStorage.getItem('printerConnection')
+    return stored ? (JSON.parse(stored) as PrinterConnection) : null
+  } catch {
+    return null
+  }
+}
 
 export default function TicketEditor(): React.JSX.Element {
   const store = useEditorStore()
   const [showPrintDialog, setShowPrintDialog] = useState(false)
   const [showBatchPanel, setShowBatchPanel] = useState(false)
   const [editorMode, setEditorMode] = useState<'visual' | 'fgl'>('visual')
+  const [zoom, setZoom] = useState(1.5)
 
-  const selectedPrinter = localStorage.getItem('selectedPrinter') ?? ''
-  const canPrint = Boolean(selectedPrinter)
+  function zoomIn(): void { setZoom(z => Math.min(4, Math.round((z + 0.25) * 100) / 100)) }
+  function zoomOut(): void { setZoom(z => Math.max(0.5, Math.round((z - 0.25) * 100) / 100)) }
+
+  const connection = loadStoredConnection()
+  const canPrint = connection !== null
 
   function handleStockChange(e: React.ChangeEvent<HTMLSelectElement>): void {
     store.setDocument({ ...store.document, stock: e.target.value as StockId })
@@ -62,6 +76,29 @@ export default function TicketEditor(): React.JSX.Element {
 
         <div className="flex-1" />
 
+        {/* Zoom controls */}
+        <div className="flex items-center gap-1 border border-gray-700 rounded overflow-hidden">
+          <button
+            aria-label="Zoom out"
+            onClick={zoomOut}
+            disabled={zoom <= 0.5}
+            className="px-2 py-1 text-xs font-medium bg-gray-800 text-gray-300 hover:text-white disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
+          >
+            −
+          </button>
+          <span className="px-2 text-xs text-gray-400 tabular-nums select-none">
+            {Math.round(zoom * 100)}%
+          </span>
+          <button
+            aria-label="Zoom in"
+            onClick={zoomIn}
+            disabled={zoom >= 4}
+            className="px-2 py-1 text-xs font-medium bg-gray-800 text-gray-300 hover:text-white disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
+          >
+            +
+          </button>
+        </div>
+
         <button
           onClick={() => setShowBatchPanel(true)}
           className="px-3 py-1 bg-purple-700 hover:bg-purple-600 text-white text-xs font-medium rounded transition-colors"
@@ -79,16 +116,15 @@ export default function TicketEditor(): React.JSX.Element {
       </div>
 
       {/* Main layout */}
-      <div className="flex flex-1 gap-2 min-h-0">
+      <div className="flex flex-1 gap-2 min-h-0 overflow-hidden">
         {editorMode === 'visual' ? (
           <>
-            {/* Left: Element palette */}
             <ElementPalette onAddElement={store.addElement} />
 
-            {/* Center: Canvas */}
             <EditorCanvas
               document={store.document}
               selectedIndex={store.selectedIndex}
+              zoom={zoom}
               onSelect={(idx) => {
                 if (idx < 0) {
                   store.selectElement(null)
@@ -99,7 +135,6 @@ export default function TicketEditor(): React.JSX.Element {
               onUpdateElement={store.updateElement}
             />
 
-            {/* Right: Properties + FGL source */}
             <div className="w-72 shrink-0 flex flex-col gap-2 overflow-hidden">
               <div className="flex-1 bg-gray-900 border border-gray-700 rounded-lg overflow-hidden">
                 <div className="px-3 py-2 text-xs font-semibold text-gray-400 border-b border-gray-800">
@@ -130,10 +165,10 @@ export default function TicketEditor(): React.JSX.Element {
         )}
       </div>
 
-      {showPrintDialog && canPrint && (
+      {showPrintDialog && connection && (
         <PrintDialog
           document={store.document}
-          printerName={selectedPrinter}
+          connection={connection}
           onClose={() => setShowPrintDialog(false)}
         />
       )}
@@ -157,7 +192,7 @@ export default function TicketEditor(): React.JSX.Element {
             </div>
             <BatchPrintPanel
               document={store.document}
-              printerName={selectedPrinter}
+              connection={connection}
             />
           </div>
         </div>

@@ -1,5 +1,7 @@
 import { ipcMain } from 'electron'
 import { listPrinters, printRaw, queryPrinter } from './printer'
+import { printRawTcp, queryPrinterTcp } from './tcpPrinter'
+import type { PrinterConnection } from '../shared/types'
 
 export function registerIpcHandlers(): void {
   ipcMain.handle('printer:list', async (): Promise<string[]> => {
@@ -8,15 +10,17 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle(
     'printer:print',
-    async (_, printerName: string, fglData: string) => {
-      return printRaw(printerName, fglData)
+    async (_, connection: PrinterConnection, fglData: string) => {
+      if (connection.type === 'usb') return printRaw(connection.printerName, fglData)
+      return printRawTcp(connection.host, connection.port, fglData)
     }
   )
 
   ipcMain.handle(
     'printer:query',
-    async (_, printerName: string, command: string) => {
-      return queryPrinter(printerName, command)
+    async (_, connection: PrinterConnection, command: string) => {
+      if (connection.type === 'usb') return queryPrinter(connection.printerName, command)
+      return queryPrinterTcp(connection.host, connection.port, command)
     }
   )
 }

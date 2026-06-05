@@ -2,6 +2,7 @@ import { useState, useRef, useCallback } from 'react'
 import { compile } from '../../../fgl/compiler'
 import { applyDataRow } from '../../../fgl/template'
 import type { TicketDocument } from '../../../fgl/types'
+import type { PrinterConnection } from '../../../shared/types'
 
 export type RowStatus = 'pending' | 'printing' | 'done' | 'error'
 
@@ -16,7 +17,7 @@ export interface UseBatchPrintReturn {
   rows: BatchRow[]
   isRunning: boolean
   loadRows: (data: Record<string, string>[]) => void
-  startPrint: (doc: TicketDocument, printerName: string) => void
+  startPrint: (doc: TicketDocument, connection: PrinterConnection) => void
   pause: () => void
   reset: () => void
 }
@@ -36,27 +37,24 @@ export function useBatchPrint(): UseBatchPrintReturn {
   }, [])
 
   const startPrint = useCallback(
-    async (doc: TicketDocument, printerName: string): Promise<void> => {
+    async (doc: TicketDocument, connection: PrinterConnection): Promise<void> => {
       isPausedRef.current = false
       setIsRunning(true)
 
-      // Snapshot current rows to iterate; we'll drive updates via setRows
       setRows((currentRows) => {
-        // Kick off the async work with a reference snapshot
         void (async () => {
           const snapshot = currentRows.slice()
           for (const row of snapshot) {
             if (isPausedRef.current) break
             if (row.status !== 'pending') continue
 
-            // Mark as printing
             setRows((prev) =>
               prev.map((r) => (r.id === row.id ? { ...r, status: 'printing' } : r))
             )
 
             try {
               const fgl = compile(applyDataRow(doc, row.data))
-              const result = await window.printerApi.print(printerName, fgl)
+              const result = await window.printerApi.print(connection, fgl)
               if (result.success) {
                 setRows((prev) =>
                   prev.map((r) => (r.id === row.id ? { ...r, status: 'done' } : r))

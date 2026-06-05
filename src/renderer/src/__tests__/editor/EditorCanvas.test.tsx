@@ -215,6 +215,126 @@ describe('EditorCanvas', () => {
     expect(container.querySelector('input')).toBeNull()
   })
 
+  // ── hwScale text rendering tests ────────────────────────────────────────────
+
+  it('text with hwScale has larger fontSize (height multiplier)', () => {
+    const doc: TicketDocument = {
+      stock: 'CONCERT',
+      elements: [{ type: 'text', row: 100, col: 100, font: 3, hwScale: [2, 3], content: 'Hi' }]
+    }
+    const { container } = render(
+      <EditorCanvas document={doc} selectedIndex={null} onSelect={vi.fn()} onUpdateElement={vi.fn()} />
+    )
+    const svgText = container.querySelector('[data-element-index="0"] text')
+    // fontSize = 10 * SCALE * font * hwScale[1] = 10 * 0.15 * 3 * 3 = 13.5
+    expect(svgText?.getAttribute('font-size')).toBe('13.5')
+  })
+
+  it('text without hwScale uses base fontSize', () => {
+    const { container } = render(
+      <EditorCanvas document={concertDoc} selectedIndex={null} onSelect={vi.fn()} onUpdateElement={vi.fn()} />
+    )
+    const svgText = container.querySelector('[data-element-index="0"] text')
+    // fontSize = 10 * SCALE * font = 10 * 0.15 * 3 = 4.5
+    expect(svgText?.getAttribute('font-size')).toBe('4.5')
+  })
+
+  it('text with hwScale has wider hit rect (width multiplier)', () => {
+    const doc: TicketDocument = {
+      stock: 'CONCERT',
+      elements: [{ type: 'text', row: 100, col: 100, font: 3, hwScale: [2, 3], content: 'Hi' }]
+    }
+    const { container } = render(
+      <EditorCanvas document={doc} selectedIndex={null} onSelect={vi.fn()} onUpdateElement={vi.fn()} />
+    )
+    const hitRect = container.querySelector('[data-element-index="0"] rect')
+    // width = len * font * 6 * SCALE * hwScale[0] = 2 * 3 * 6 * 0.15 * 2 = 10.8
+    expect(parseFloat(hitRect?.getAttribute('width') ?? '0')).toBeCloseTo(10.8)
+  })
+
+  // ── zoom prop tests ──────────────────────────────────────────────────────────
+
+  it('zoom=2 doubles the SVG width and height', () => {
+    const { container } = render(
+      <EditorCanvas document={concertDoc} selectedIndex={null} onSelect={vi.fn()} onUpdateElement={vi.fn()} zoom={2} />
+    )
+    const svg = container.querySelector('svg')
+    // CONCERT heightDots=3300, widthDots=1200; SCALE=0.15; zoom=2
+    expect(svg?.getAttribute('width')).toBe('990')   // 3300 * 0.15 * 2
+    expect(svg?.getAttribute('height')).toBe('360')  // 1200 * 0.15 * 2
+  })
+
+  it('default zoom=1 keeps base SVG dimensions', () => {
+    const { container } = render(
+      <EditorCanvas document={concertDoc} selectedIndex={null} onSelect={vi.fn()} onUpdateElement={vi.fn()} />
+    )
+    const svg = container.querySelector('svg')
+    expect(svg?.getAttribute('width')).toBe('495')   // 3300 * 0.15
+    expect(svg?.getAttribute('height')).toBe('180')  // 1200 * 0.15
+  })
+
+  it('zoom=2 doubles the x position of a text element', () => {
+    const { container } = render(
+      <EditorCanvas document={concertDoc} selectedIndex={null} onSelect={vi.fn()} onUpdateElement={vi.fn()} zoom={2} />
+    )
+    const svgText = container.querySelector('[data-element-index="0"] text')
+    // col=100, SCALE=0.15, zoom=2 → x = 100 * 0.15 * 2 = 30
+    expect(svgText?.getAttribute('x')).toBe('30')
+  })
+
+  // ── CINEMA text rendering tests ─────────────────────────────────────────────
+
+  it('CINEMA text does NOT use dominantBaseline (anchor is at baseline, text above — same as CONCERT)', () => {
+    const doc: TicketDocument = {
+      stock: 'CINEMA',
+      elements: [{ type: 'text', row: 200, col: 100, font: 3, content: 'Test' }]
+    }
+    const { container } = render(
+      <EditorCanvas document={doc} selectedIndex={null} onSelect={vi.fn()} onUpdateElement={vi.fn()} />
+    )
+    const svgText = container.querySelector('[data-element-index="0"] text')
+    expect(svgText?.getAttribute('dominant-baseline')).not.toBe('hanging')
+  })
+
+  it('CINEMA text hit rect starts ABOVE y=row*SCALE (same baseline convention as CONCERT)', () => {
+    const doc: TicketDocument = {
+      stock: 'CINEMA',
+      elements: [{ type: 'text', row: 200, col: 100, font: 3, content: 'Test' }]
+    }
+    const { container } = render(
+      <EditorCanvas document={doc} selectedIndex={null} onSelect={vi.fn()} onUpdateElement={vi.fn()} />
+    )
+    const hitRect = container.querySelector('[data-element-index="0"] rect')
+    // hit rect top = (row - font*10) * SCALE = (200 - 30) * 0.15 = 25.5
+    expect(hitRect?.getAttribute('y')).toBe('25.5')
+  })
+
+  it('CONCERT text hit rect starts ABOVE y=row*SCALE (baseline convention)', () => {
+    const { container } = render(
+      <EditorCanvas document={concertDoc} selectedIndex={null} onSelect={vi.fn()} onUpdateElement={vi.fn()} />
+    )
+    const hitRect = container.querySelector('[data-element-index="0"] rect')
+    // (row - font*10) * SCALE = (100 - 30) * 0.15 = 10.5
+    expect(hitRect?.getAttribute('y')).toBe('10.5')
+  })
+
+  // ── clipPath boundary tests ─────────────────────────────────────────────────
+
+  it('SVG contains a clipPath element for the stock boundary', () => {
+    const { container } = render(
+      <EditorCanvas document={concertDoc} selectedIndex={null} onSelect={vi.fn()} onUpdateElement={vi.fn()} />
+    )
+    expect(container.querySelector('clipPath')).not.toBeNull()
+  })
+
+  it('elements group uses clip-path attribute to clip to stock boundary', () => {
+    const { container } = render(
+      <EditorCanvas document={concertDoc} selectedIndex={null} onSelect={vi.fn()} onUpdateElement={vi.fn()} />
+    )
+    const clippedGroup = container.querySelector('g[clip-path]')
+    expect(clippedGroup).not.toBeNull()
+  })
+
   it('double-clicking a non-text element does NOT show input', () => {
     const boxDoc: TicketDocument = {
       stock: 'CONCERT',

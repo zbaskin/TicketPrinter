@@ -2,14 +2,23 @@ import { useState } from 'react'
 import PrinterSetup from './settings/PrinterSetup'
 import TicketEditor from './editor/TicketEditor'
 import PrinterConsole from './console/PrinterConsole'
-import type { } from '../../fgl/types'
+import type { PrinterConnection } from '../../shared/types'
 
 type Tab = 'setup' | 'editor' | 'console'
 
+function loadStoredConnection(): PrinterConnection | null {
+  try {
+    const stored = localStorage.getItem('printerConnection')
+    return stored ? (JSON.parse(stored) as PrinterConnection) : null
+  } catch {
+    return null
+  }
+}
+
 export default function App(): React.JSX.Element {
   const [tab, setTab] = useState<Tab>('setup')
-  const [selectedPrinter, setSelectedPrinter] = useState<string>(
-    () => localStorage.getItem('selectedPrinter') ?? ''
+  const [printerConnection, setPrinterConnection] = useState<PrinterConnection | null>(
+    loadStoredConnection
   )
 
   return (
@@ -40,14 +49,14 @@ export default function App(): React.JSX.Element {
       <main className="flex-1 p-4 flex flex-col">
         {tab === 'setup' && (
           <PrinterSetup
-            onPrinterSelected={(p) => setSelectedPrinter(p)}
+            onConnectionChanged={(c) => setPrinterConnection(c)}
           />
         )}
         {tab === 'editor' && (
           <TicketEditor />
         )}
         {tab === 'console' && (
-          <PrinterConsole printerName={selectedPrinter} />
+          <PrinterConsole connection={printerConnection} />
         )}
       </main>
     </div>

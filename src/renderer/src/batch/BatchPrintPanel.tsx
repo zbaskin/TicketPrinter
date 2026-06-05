@@ -4,10 +4,11 @@ import type { RowStatus } from './useBatchPrint'
 import { parseCsv, parseJson } from '../../../fgl/dataParser'
 import { extractFields } from '../../../fgl/template'
 import type { TicketDocument } from '../../../fgl/types'
+import type { PrinterConnection } from '../../../shared/types'
 
 interface BatchPrintPanelProps {
   document: TicketDocument
-  printerName: string
+  connection: PrinterConnection | null
 }
 
 const STATUS_COLORS: Record<RowStatus, string> = {
@@ -17,7 +18,7 @@ const STATUS_COLORS: Record<RowStatus, string> = {
   error:    'text-red-400'
 }
 
-export default function BatchPrintPanel({ document: doc, printerName }: BatchPrintPanelProps): React.JSX.Element {
+export default function BatchPrintPanel({ document: doc, connection }: BatchPrintPanelProps): React.JSX.Element {
   const { rows, isRunning, loadRows, startPrint, pause, reset } = useBatchPrint()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [parseError, setParseError] = useState<string | undefined>()
@@ -26,7 +27,7 @@ export default function BatchPrintPanel({ document: doc, printerName }: BatchPri
 
   const doneCount = rows.filter((r) => r.status === 'done').length
   const totalCount = rows.length
-  const canPrint = rows.length > 0 && Boolean(printerName) && !isRunning
+  const canPrint = rows.length > 0 && connection !== null && !isRunning
 
   function handleImportClick(): void {
     fileInputRef.current?.click()
@@ -52,7 +53,6 @@ export default function BatchPrintPanel({ document: doc, printerName }: BatchPri
       setParseError(undefined)
       setImportedHeaders(result.headers)
 
-      // Check for missing fields
       const templateFields = extractFields(doc)
       const missing = templateFields.filter((f) => !result.headers.includes(f))
       setMissingFields(missing)
@@ -60,8 +60,6 @@ export default function BatchPrintPanel({ document: doc, printerName }: BatchPri
       loadRows(result.rows)
     }
     reader.readAsText(file)
-
-    // Reset file input so the same file can be re-selected
     e.target.value = ''
   }
 
@@ -148,7 +146,7 @@ export default function BatchPrintPanel({ document: doc, printerName }: BatchPri
       {/* Section 3: Controls */}
       <div className="flex items-center gap-3">
         <button
-          onClick={() => startPrint(doc, printerName)}
+          onClick={() => connection && startPrint(doc, connection)}
           disabled={!canPrint}
           className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed text-white text-xs font-medium rounded transition-colors"
         >

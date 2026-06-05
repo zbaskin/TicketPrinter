@@ -51,7 +51,7 @@ describe('TicketEditor', () => {
   })
 
   it('Print button is enabled when a printer is in localStorage', () => {
-    localStorage.setItem('selectedPrinter', 'Boca Lemur')
+    localStorage.setItem('printerConnection', JSON.stringify({ type: 'usb', printerName: 'Boca Lemur' }))
     render(<TicketEditor />)
     const printBtn = screen.getByRole('button', { name: /^print$/i })
     expect(printBtn).not.toBeDisabled()
@@ -84,6 +84,32 @@ describe('TicketEditor', () => {
     fireEvent.click(screen.getByRole('button', { name: /^visual$/i }))
     expect(screen.getByRole('button', { name: /text/i })).toBeInTheDocument()
     expect(screen.queryByRole('textbox')).toBeNull()
+  })
+
+  it('zoom in and zoom out buttons are present in the toolbar', () => {
+    render(<TicketEditor />)
+    expect(screen.getByRole('button', { name: /zoom in/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /zoom out/i })).toBeInTheDocument()
+  })
+
+  it('clicking zoom in increases canvas SVG width', () => {
+    const { container } = render(<TicketEditor />)
+    const svg = container.querySelector('svg')
+    const initialWidth = parseFloat(svg?.getAttribute('width') ?? '0')
+    fireEvent.click(screen.getByRole('button', { name: /zoom in/i }))
+    const newWidth = parseFloat(container.querySelector('svg')?.getAttribute('width') ?? '0')
+    expect(newWidth).toBeGreaterThan(initialWidth)
+  })
+
+  it('clicking zoom out decreases canvas SVG width', () => {
+    const { container } = render(<TicketEditor />)
+    // Zoom in first so we have room to zoom out
+    fireEvent.click(screen.getByRole('button', { name: /zoom in/i }))
+    const svg = container.querySelector('svg')
+    const zoomedWidth = parseFloat(svg?.getAttribute('width') ?? '0')
+    fireEvent.click(screen.getByRole('button', { name: /zoom out/i }))
+    const finalWidth = parseFloat(container.querySelector('svg')?.getAttribute('width') ?? '0')
+    expect(finalWidth).toBeLessThan(zoomedWidth)
   })
 
   it('"Batch Print" button is present in the toolbar', () => {

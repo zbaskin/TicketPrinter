@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { compile } from '../../../fgl/compiler'
 import type { TicketDocument } from '../../../fgl/types'
+import type { PrinterConnection } from '../../../shared/types'
+import { connectionLabel } from '../../../shared/types'
 
 type CopyStatus = 'queued' | 'printing' | 'done' | 'error'
 
@@ -12,7 +14,7 @@ interface CopyState {
 
 interface PrintDialogProps {
   document: TicketDocument
-  printerName: string
+  connection: PrinterConnection
   onClose: () => void
 }
 
@@ -23,7 +25,7 @@ const STATUS_COLORS: Record<CopyStatus, string> = {
   error:    'text-red-400'
 }
 
-export default function PrintDialog({ document: doc, printerName, onClose }: PrintDialogProps): React.JSX.Element {
+export default function PrintDialog({ document: doc, connection, onClose }: PrintDialogProps): React.JSX.Element {
   const [copies, setCopies] = useState<number>(1)
   const [printing, setPrinting] = useState<boolean>(false)
   const [copyStates, setCopyStates] = useState<CopyState[]>([])
@@ -42,7 +44,7 @@ export default function PrintDialog({ document: doc, printerName, onClose }: Pri
     for (let i = 0; i < copies; i++) {
       setCopyStates((prev) => prev.map((c) => c.index === i ? { ...c, status: 'printing' } : c))
       try {
-        const result = await window.printerApi.print(printerName, fgl)
+        const result = await window.printerApi.print(connection, fgl)
         if (result.success) {
           setCopyStates((prev) => prev.map((c) => c.index === i ? { ...c, status: 'done' } : c))
         } else {
@@ -71,17 +73,15 @@ export default function PrintDialog({ document: doc, printerName, onClose }: Pri
         </div>
 
         <div className="text-sm text-gray-400">
-          Printer: <span className="text-white font-mono">{printerName}</span>
+          Printer: <span className="text-white font-mono">{connectionLabel(connection)}</span>
         </div>
 
-        {/* Empty document warning */}
         {isEmpty && (
           <div className="bg-amber-900/30 border border-amber-700 rounded-md px-3 py-2 text-sm text-amber-300">
             No elements on canvas — this will print a blank ticket. Add text or shapes in the Editor first.
           </div>
         )}
 
-        {/* FGL preview */}
         <div className="space-y-1">
           <button
             onClick={() => setShowFgl((v) => !v)}

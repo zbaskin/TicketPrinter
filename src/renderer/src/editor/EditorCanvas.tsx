@@ -9,21 +9,27 @@ interface EditorCanvasProps {
   selectedIndex: number | null
   onSelect: (index: number) => void
   onUpdateElement: (index: number, el: TicketElement) => void
+  zoom?: number
 }
 
 function ElementShape({
   el,
   index,
   selected,
+  cinema,
+  zoom,
   onPointerDown,
   onDoubleClick
 }: {
   el: TicketElement
   index: number
   selected: boolean
+  cinema: boolean
+  zoom: number
   onPointerDown: (e: React.PointerEvent, index: number) => void
   onDoubleClick: (e: React.MouseEvent, index: number) => void
 }): React.JSX.Element {
+  const s = SCALE * zoom
   const strokeColor = selected ? '#3b82f6' : '#a3e635'
 
   const attrs = {
@@ -35,22 +41,29 @@ function ElementShape({
   }
 
   switch (el.type) {
-    case 'text':
+    case 'text': {
+      const hScale = el.hwScale ? el.hwScale[1] : 1
+      const wScale = el.hwScale ? el.hwScale[0] : 1
+      const font = el.font ?? 3
+      const charHeight = font * 12 * s * hScale
+      const charWidth = el.content.length * font * 6 * s * wScale
+      // Anchor is at the baseline; character body extends upward (matches FGL <RL> and default).
+      const hitY = el.row * s - font * 10 * s * hScale
       return (
         <g {...attrs}>
           {/* Transparent hit-target rect so entire area is draggable */}
           <rect
-            x={el.col * SCALE}
-            y={(el.row - el.font * 10) * SCALE}
-            width={el.content.length * el.font * 6 * SCALE}
-            height={el.font * 12 * SCALE}
+            x={el.col * s}
+            y={hitY}
+            width={charWidth}
+            height={charHeight}
             fill="transparent"
             pointerEvents="all"
           />
           <text
-            x={el.col * SCALE}
-            y={el.row * SCALE}
-            fontSize={10 * SCALE * (el.font ?? 3)}
+            x={el.col * s}
+            y={el.row * s}
+            fontSize={10 * s * font * hScale}
             fill={selected ? '#3b82f6' : '#a3e635'}
             pointerEvents="none"
           >
@@ -58,57 +71,65 @@ function ElementShape({
           </text>
         </g>
       )
+    }
 
-    case 'hline':
+    case 'hline': {
+      const s = SCALE * zoom
       return (
         <line
           {...attrs}
-          x1={el.col * SCALE}
-          y1={el.row * SCALE}
-          x2={(el.col + el.length) * SCALE}
-          y2={el.row * SCALE}
+          x1={el.col * s}
+          y1={el.row * s}
+          x2={(el.col + el.length) * s}
+          y2={el.row * s}
           stroke={strokeColor}
-          strokeWidth={Math.max(1, el.thickness * SCALE)}
+          strokeWidth={Math.max(1, el.thickness * s)}
         />
       )
+    }
 
-    case 'vline':
+    case 'vline': {
+      const s = SCALE * zoom
       return (
         <line
           {...attrs}
-          x1={el.col * SCALE}
-          y1={el.row * SCALE}
-          x2={el.col * SCALE}
-          y2={(el.row + el.height) * SCALE}
+          x1={el.col * s}
+          y1={el.row * s}
+          x2={el.col * s}
+          y2={(el.row + el.height) * s}
           stroke={strokeColor}
-          strokeWidth={Math.max(1, el.thickness * SCALE)}
+          strokeWidth={Math.max(1, el.thickness * s)}
         />
       )
+    }
 
-    case 'box':
+    case 'box': {
+      const s = SCALE * zoom
       return (
         <rect
           {...attrs}
-          x={el.col * SCALE}
-          y={el.row * SCALE}
-          width={el.width * SCALE}
-          height={el.height * SCALE}
+          x={el.col * s}
+          y={el.row * s}
+          width={el.width * s}
+          height={el.height * s}
           fill={el.fill ? strokeColor : 'none'}
           stroke={strokeColor}
-          strokeWidth={Math.max(1, el.thickness * SCALE)}
+          strokeWidth={Math.max(1, el.thickness * s)}
           fillOpacity={el.fill ? 0.5 : 0}
         />
       )
+    }
 
     case 'qr': {
+      const s = SCALE * zoom
       const dotSize = el.dotSize ?? 6
       const estimatedModules = 41
-      const dim = estimatedModules * dotSize * SCALE
+      const dim = estimatedModules * dotSize * s
       return (
         <g {...attrs}>
           <rect
-            x={el.col * SCALE}
-            y={el.row * SCALE}
+            x={el.col * s}
+            y={el.row * s}
             width={dim}
             height={dim}
             fill="none"
@@ -117,8 +138,8 @@ function ElementShape({
             strokeWidth={1}
           />
           <text
-            x={el.col * SCALE + dim / 2}
-            y={el.row * SCALE + dim / 2}
+            x={el.col * s + dim / 2}
+            y={el.row * s + dim / 2}
             textAnchor="middle"
             dominantBaseline="middle"
             fontSize={8}
@@ -132,13 +153,14 @@ function ElementShape({
     }
 
     case 'barcode': {
-      const barcodeW = 300 * SCALE
-      const barcodeH = el.height * SCALE
+      const s = SCALE * zoom
+      const barcodeW = 300 * s
+      const barcodeH = el.height * s
       return (
         <g {...attrs}>
           <rect
-            x={el.col * SCALE}
-            y={el.row * SCALE}
+            x={el.col * s}
+            y={el.row * s}
             width={barcodeW}
             height={barcodeH}
             fill="none"
@@ -147,8 +169,8 @@ function ElementShape({
             strokeWidth={1}
           />
           <text
-            x={el.col * SCALE + barcodeW / 2}
-            y={el.row * SCALE + barcodeH / 2}
+            x={el.col * s + barcodeW / 2}
+            y={el.row * s + barcodeH / 2}
             textAnchor="middle"
             dominantBaseline="middle"
             fontSize={8}
@@ -167,23 +189,31 @@ function ElementShape({
 
 function InlineTextInput({
   el,
+  cinema,
+  zoom,
   value,
   onChange,
   onCommit,
   onCancel
 }: {
   el: TicketElement & { type: 'text' }
+  cinema: boolean
+  zoom: number
   value: string
   onChange: (v: string) => void
   onCommit: () => void
   onCancel: () => void
 }): React.JSX.Element {
   const inputRef = useRef<HTMLInputElement>(null)
+  const s = SCALE * zoom
 
   useEffect(() => {
     inputRef.current?.focus()
     inputRef.current?.select()
   }, [])
+
+  const hScale = el.hwScale ? el.hwScale[1] : 1
+  const topPx = el.row * s - el.font * 10 * s * hScale
 
   return (
     <input
@@ -203,9 +233,9 @@ function InlineTextInput({
       onBlur={onCommit}
       style={{
         position: 'absolute',
-        left: el.col * SCALE,
-        top: el.row * SCALE - el.font * 10 * SCALE,
-        fontSize: `${10 * SCALE * (el.font ?? 3) * 4}px`,
+        left: el.col * s,
+        top: topPx,
+        fontSize: `${10 * s * (el.font ?? 3) * hScale * 4}px`,
         fontFamily: 'monospace',
         background: 'rgba(31,41,55,0.95)',
         color: '#a3e635',
@@ -225,11 +255,14 @@ export default function EditorCanvas({
   document: doc,
   selectedIndex,
   onSelect,
-  onUpdateElement
+  onUpdateElement,
+  zoom = 1
 }: EditorCanvasProps): React.JSX.Element {
   const stock = getStock(doc)
-  const svgWidth = stock.heightDots * SCALE
-  const svgHeight = stock.widthDots * SCALE
+  const cinema = doc.stock === 'CINEMA'
+  const s = SCALE * zoom
+  const svgWidth = stock.heightDots * s
+  const svgHeight = stock.widthDots * s
 
   const svgRef = useRef<SVGSVGElement>(null)
 
@@ -272,7 +305,6 @@ export default function EditorCanvas({
   }
 
   function handleSvgPointerDown(e: React.PointerEvent): void {
-    // Only deselect if clicking directly on SVG (not on a child element that stopped propagation)
     onSelect(-1)
   }
 
@@ -286,8 +318,8 @@ export default function EditorCanvas({
     const dx = currentSvg.x - pointerDownSvgRef.current.x
     const dy = currentSvg.y - pointerDownSvgRef.current.y
 
-    const newRow = elementOriginRef.current.row + dy / SCALE
-    const newCol = elementOriginRef.current.col + dx / SCALE
+    const newRow = elementOriginRef.current.row + dy / s
+    const newCol = elementOriginRef.current.col + dx / s
 
     const clamped = clampToStock(newRow, newCol, stock)
 
@@ -305,10 +337,8 @@ export default function EditorCanvas({
       const dist = Math.sqrt(dx * dx + dy * dy)
 
       if (dist < 3) {
-        // Click — restore original position (no update needed, no move happened)
-        // Just clear refs
+        // Click — no movement
       } else {
-        // Drag — snap final position to grid
         if (!svgRef.current || !elementOriginRef.current) {
           dragIndexRef.current = null
           pointerDownSvgRef.current = null
@@ -321,8 +351,8 @@ export default function EditorCanvas({
         const dxSvg = currentSvg.x - pointerDownSvgRef.current!.x
         const dySvg = currentSvg.y - pointerDownSvgRef.current!.y
 
-        const rawRow = elementOriginRef.current.row + dySvg / SCALE
-        const rawCol = elementOriginRef.current.col + dxSvg / SCALE
+        const rawRow = elementOriginRef.current.row + dySvg / s
+        const rawCol = elementOriginRef.current.col + dxSvg / s
 
         const clamped = clampToStock(rawRow, rawCol, stock)
         const snappedRow = snapToGrid(clamped.row)
@@ -359,7 +389,7 @@ export default function EditorCanvas({
 
   return (
     <div
-      className="overflow-auto bg-gray-800 rounded-lg p-2 flex-1 flex items-center justify-center"
+      className="overflow-auto bg-gray-800 rounded-lg p-2 flex-1"
       style={{ position: 'relative' }}
     >
       <svg
@@ -385,10 +415,10 @@ export default function EditorCanvas({
 
         {/* Safe margin dashed rect */}
         <rect
-          x={stock.safeMargin * SCALE}
-          y={stock.safeMargin * SCALE}
-          width={(stock.heightDots - stock.safeMargin * 2) * SCALE}
-          height={(stock.widthDots - stock.safeMargin * 2) * SCALE}
+          x={stock.safeMargin * s}
+          y={stock.safeMargin * s}
+          width={(stock.heightDots - stock.safeMargin * 2) * s}
+          height={(stock.widthDots - stock.safeMargin * 2) * s}
           fill="none"
           stroke="#4b5563"
           strokeWidth={0.5}
@@ -400,9 +430,9 @@ export default function EditorCanvas({
         {stock.exclusionZones.map((zone, zi) => (
           <rect
             key={zi}
-            x={zone.colStart * SCALE}
+            x={zone.colStart * s}
             y={0}
-            width={(zone.colEnd - zone.colStart) * SCALE}
+            width={(zone.colEnd - zone.colStart) * s}
             height={svgHeight}
             fill="rgba(239, 68, 68, 0.2)"
             stroke="rgba(239, 68, 68, 0.5)"
@@ -411,23 +441,34 @@ export default function EditorCanvas({
           />
         ))}
 
-        {/* Elements */}
-        {doc.elements.map((el, i) => (
-          <ElementShape
-            key={i}
-            el={el}
-            index={i}
-            selected={selectedIndex === i}
-            onPointerDown={handleElementPointerDown}
-            onDoubleClick={handleDoubleClick}
-          />
-        ))}
+        {/* Clip elements to stock boundary so out-of-bounds content is visually cut */}
+        <defs>
+          <clipPath id="stock-clip">
+            <rect x={0} y={0} width={svgWidth} height={svgHeight} />
+          </clipPath>
+        </defs>
+        <g clip-path="url(#stock-clip)">
+          {doc.elements.map((el, i) => (
+            <ElementShape
+              key={i}
+              el={el}
+              index={i}
+              selected={selectedIndex === i}
+              cinema={cinema}
+              zoom={zoom}
+              onPointerDown={handleElementPointerDown}
+              onDoubleClick={handleDoubleClick}
+            />
+          ))}
+        </g>
       </svg>
 
       {/* Inline text edit input */}
       {editingEl !== null && (
         <InlineTextInput
           el={editingEl}
+          cinema={cinema}
+          zoom={zoom}
           value={editValue}
           onChange={setEditValue}
           onCommit={commitEdit}
