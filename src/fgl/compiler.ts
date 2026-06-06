@@ -23,28 +23,16 @@ const ROTATION_CMDS: Record<number, string> = {
   270: '<RL>'
 }
 
-// CINEMA physical layout: FGL row = horizontal (3.25" axis, 0-1950),
-// FGL col = vertical (2" feed axis, 0-1200).
-// Canvas uses the opposite convention (canvas col = horizontal, canvas row = vertical),
-// so all coordinates must be swapped: FGL_row = canvas_col, FGL_col = canvas_row.
+const CINEMA_WIDTH = 1200 // STOCKS.CINEMA.widthDots
+
+// CINEMA physical layout (Boca Lemur, empirically confirmed):
+//   FGL row = horizontal axis (3.25", 0–1950): increasing row moves RIGHT
+//   FGL col = vertical axis  (2",    0–1200):  increasing col moves UPWARD (col=0 at bottom)
 //
-// PRINTER CONFIGURATION NOTE (CINEMA stock):
-// All compiler tests pass and the generated FGL commands are correct. If the physical
-// printout shows content offset (e.g. top-left of canvas prints halfway down the ticket,
-// or bottom-edge content wraps to the previous ticket), the cause is the printer's
-// "Top of Form" (TOF) offset, not a software bug.
-//
-// Diagnosis: the FGL coordinate origin (row=0, col=0) must correspond to the physical
-// top-left corner of the 3.25"×2" CINEMA ticket. If it does not, the printer firmware's
-// TOF is set to a non-zero value. Visual elements that appear "blank" are almost certainly
-// printing outside the visible ticket area for the same reason — the compiler generates
-// syntactically correct <LV>, <LH>, and <BX> commands.
-//
-// Fix: on the physical Boca printer, reset the CINEMA form's Top of Form offset to 0
-// (typically via the printer control panel or Boca printer utility). The form length
-// should be set to match the stock's 2" feed axis: 1200 dots at 600 DPI.
-// Do NOT attempt to compensate for this offset in FGL code without first confirming
-// the printer model and its FGL spec.
+// Canvas convention: el.col = horizontal (x), el.row = vertical (y, increases downward).
+// Required transforms: FGL_row = canvas_col (el.col)
+//                      FGL_col = 1200 - canvas_row (inverted because canvas↓ ≠ FGL↑)
+// CINEMA widthDots = 1200 (STOCKS.CINEMA.widthDots).
 
 function compileText(el: TextElement): string {
   const font = `<F${el.font}>`
@@ -86,8 +74,10 @@ function compileQR(el: QRElement, cinema = false): string {
         const physRow = el.row + r * dotSize
         const physCol = el.col + c * dotSize
         if (cinema) {
-          // Swap: FGL_row = canvas_col, FGL_col = canvas_row
-          parts.push(`<LH${n(physCol)},${n(physRow)},${n(physRow + dotSize)},${dotSize}>`)
+          // FGL_row = physCol; FGL_col inverted: col end = 1200-physRow, col start = 1200-physRow-dotSize
+          const colEnd = CINEMA_WIDTH - physRow
+          const colStart = colEnd - dotSize
+          parts.push(`<LH${n(physCol)},${n(colStart)},${n(colEnd)},${dotSize}>`)
         } else {
           parts.push(`<LH${n(physRow)},${n(physCol)},${n(physCol + dotSize)},${dotSize}>`)
         }
@@ -117,9 +107,9 @@ function compileBarcode(el: BarcodeElement, cinema = false): string {
   return `<X2>${rotPrefix}<RC${n(el.row)},${n(el.col)}><${cmd}${heightUnits}>${el.content}${rotSuffix}`
 }
 
-// CINEMA coordinate swap: FGL_row = canvas_col, FGL_col = canvas_row.
-// HLine/VLine swap types because the horizontal/vertical axes are exchanged.
-// Text gains 90° CW rotation so characters advance left-to-right (+ROW direction).
+// CINEMA coordinate transform: FGL_row = canvas_col, FGL_col = 1200 - canvas_row.
+// HLine/VLine swap types because axes are exchanged.
+// Text gains 270° CCW rotation (<RL>) so characters advance left-to-right.
 function transformSwap(
   el: TextElement | HLineElement | VLineElement | BoxElement
 ): TicketElement {
@@ -128,30 +118,32 @@ function transformSwap(
       return {
         ...el,
         row: el.col,
-        col: el.row,
+        col: CINEMA_WIDTH - el.row,
         rotation: (((el.rotation ?? 0) + 270) % 360) as 0 | 90 | 180 | 270
       }
     case 'hline':
       return {
         type: 'vline',
         row: el.col,
-        col: el.row,
+        col: CINEMA_WIDTH - el.row,
         height: el.length,
         thickness: el.thickness
       }
     case 'vline':
+      // Lower FGL_col bound = 1200 - (canvas_row + height); length unchanged.
       return {
         type: 'hline',
         row: el.col,
-        col: el.row,
+        col: CINEMA_WIDTH - el.row - el.height,
         length: el.height,
         thickness: el.thickness
       }
     case 'box':
+      // Lower FGL_col corner = 1200 - (canvas_row + canvas_height); axes swap.
       return {
         ...el,
         row: el.col,
-        col: el.row,
+        col: CINEMA_WIDTH - el.row - el.height,
         width: el.height,
         height: el.width
       }
@@ -173,7 +165,7 @@ function compileElement(el: TicketElement, cinema: boolean): string {
   if (!cinema) return compileElementRaw(el)
   if (el.type === 'qr') return compileQR(el, true)
   if (el.type === 'barcode') {
-    return compileBarcode({ ...el, row: el.col, col: el.row }, true)
+    return compileBarcode({ ...el, row: el.col, col: CINEMA_WIDTH - el.row }, true)
   }
   return compileElementRaw(transformSwap(el))
 }
