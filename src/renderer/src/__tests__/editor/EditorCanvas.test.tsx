@@ -338,7 +338,7 @@ describe('EditorCanvas', () => {
   it('double-clicking a non-text element does NOT show input', () => {
     const boxDoc: TicketDocument = {
       stock: 'CONCERT',
-    
+
       elements: [
         { type: 'box', row: 100, col: 100, width: 200, height: 100, thickness: 2 }
       ]
@@ -349,5 +349,184 @@ describe('EditorCanvas', () => {
     const element = container.querySelector('[data-element-index="0"]')!
     fireEvent.doubleClick(element)
     expect(container.querySelector('input')).toBeNull()
+  })
+
+  // ── Keyboard delete tests ────────────────────────────────────────────────────
+
+  it('pressing Delete with a selected element calls onRemoveElement with that index', () => {
+    const onRemoveElement = vi.fn()
+    render(
+      <EditorCanvas
+        document={concertDoc}
+        selectedIndex={0}
+        onSelect={vi.fn()}
+        onUpdateElement={vi.fn()}
+        onRemoveElement={onRemoveElement}
+      />
+    )
+    fireEvent.keyDown(window, { key: 'Delete' })
+    expect(onRemoveElement).toHaveBeenCalledWith(0)
+  })
+
+  it('pressing Backspace with a selected element calls onRemoveElement with that index', () => {
+    const onRemoveElement = vi.fn()
+    render(
+      <EditorCanvas
+        document={concertDoc}
+        selectedIndex={0}
+        onSelect={vi.fn()}
+        onUpdateElement={vi.fn()}
+        onRemoveElement={onRemoveElement}
+      />
+    )
+    fireEvent.keyDown(window, { key: 'Backspace' })
+    expect(onRemoveElement).toHaveBeenCalledWith(0)
+  })
+
+  it('pressing Delete with no element selected does NOT call onRemoveElement', () => {
+    const onRemoveElement = vi.fn()
+    render(
+      <EditorCanvas
+        document={concertDoc}
+        selectedIndex={null}
+        onSelect={vi.fn()}
+        onUpdateElement={vi.fn()}
+        onRemoveElement={onRemoveElement}
+      />
+    )
+    fireEvent.keyDown(window, { key: 'Delete' })
+    expect(onRemoveElement).not.toHaveBeenCalled()
+  })
+
+  it('pressing Delete while inline text editing does NOT call onRemoveElement', () => {
+    const onRemoveElement = vi.fn()
+    const { container } = render(
+      <EditorCanvas
+        document={concertDoc}
+        selectedIndex={0}
+        onSelect={vi.fn()}
+        onUpdateElement={vi.fn()}
+        onRemoveElement={onRemoveElement}
+      />
+    )
+    // Open inline text editor
+    const element = container.querySelector('[data-element-index="0"]')!
+    fireEvent.doubleClick(element)
+    expect(container.querySelector('input')).not.toBeNull()
+
+    fireEvent.keyDown(window, { key: 'Delete' })
+    expect(onRemoveElement).not.toHaveBeenCalled()
+  })
+
+  it('pressing Delete while a form input is focused does NOT call onRemoveElement', () => {
+    const onRemoveElement = vi.fn()
+    const { container } = render(
+      <div>
+        <input data-testid="external-input" />
+        <EditorCanvas
+          document={concertDoc}
+          selectedIndex={0}
+          onSelect={vi.fn()}
+          onUpdateElement={vi.fn()}
+          onRemoveElement={onRemoveElement}
+        />
+      </div>
+    )
+    const externalInput = container.querySelector('[data-testid="external-input"]') as HTMLInputElement
+    externalInput.focus()
+    fireEvent.keyDown(window, { key: 'Delete' })
+    expect(onRemoveElement).not.toHaveBeenCalled()
+  })
+
+  it('pressing Delete with no onRemoveElement prop does nothing (no crash)', () => {
+    render(
+      <EditorCanvas
+        document={concertDoc}
+        selectedIndex={0}
+        onSelect={vi.fn()}
+        onUpdateElement={vi.fn()}
+      />
+    )
+    expect(() => fireEvent.keyDown(window, { key: 'Delete' })).not.toThrow()
+  })
+
+  // ── Hit area tests ───────────────────────────────────────────────────────────
+
+  it('hline element renders a <g> with data-element-index (has hit area wrapper)', () => {
+    const hlineDoc: TicketDocument = {
+      stock: 'CONCERT',
+      elements: [{ type: 'hline', row: 100, col: 50, length: 200, thickness: 2 }]
+    }
+    const { container } = render(
+      <EditorCanvas document={hlineDoc} selectedIndex={null} onSelect={vi.fn()} onUpdateElement={vi.fn()} />
+    )
+    const el = container.querySelector('[data-element-index="0"]')
+    expect(el).not.toBeNull()
+    expect(el?.tagName.toLowerCase()).toBe('g')
+  })
+
+  it('hline renders an invisible thick hit line with stroke="transparent"', () => {
+    const hlineDoc: TicketDocument = {
+      stock: 'CONCERT',
+      elements: [{ type: 'hline', row: 100, col: 50, length: 200, thickness: 2 }]
+    }
+    const { container } = render(
+      <EditorCanvas document={hlineDoc} selectedIndex={null} onSelect={vi.fn()} onUpdateElement={vi.fn()} />
+    )
+    const lines = container.querySelectorAll('[data-element-index="0"] line')
+    const hitLine = Array.from(lines).find(l => l.getAttribute('stroke') === 'transparent')
+    expect(hitLine).not.toBeNull()
+    expect(parseFloat(hitLine!.getAttribute('stroke-width') ?? '0')).toBeGreaterThanOrEqual(8)
+  })
+
+  it('vline element renders a <g> with data-element-index (has hit area wrapper)', () => {
+    const vlineDoc: TicketDocument = {
+      stock: 'CONCERT',
+      elements: [{ type: 'vline', row: 50, col: 100, height: 200, thickness: 2 }]
+    }
+    const { container } = render(
+      <EditorCanvas document={vlineDoc} selectedIndex={null} onSelect={vi.fn()} onUpdateElement={vi.fn()} />
+    )
+    const el = container.querySelector('[data-element-index="0"]')
+    expect(el).not.toBeNull()
+    expect(el?.tagName.toLowerCase()).toBe('g')
+  })
+
+  it('vline renders an invisible thick hit line with stroke="transparent"', () => {
+    const vlineDoc: TicketDocument = {
+      stock: 'CONCERT',
+      elements: [{ type: 'vline', row: 50, col: 100, height: 200, thickness: 2 }]
+    }
+    const { container } = render(
+      <EditorCanvas document={vlineDoc} selectedIndex={null} onSelect={vi.fn()} onUpdateElement={vi.fn()} />
+    )
+    const lines = container.querySelectorAll('[data-element-index="0"] line')
+    const hitLine = Array.from(lines).find(l => l.getAttribute('stroke') === 'transparent')
+    expect(hitLine).not.toBeNull()
+    expect(parseFloat(hitLine!.getAttribute('stroke-width') ?? '0')).toBeGreaterThanOrEqual(8)
+  })
+
+  it('qr element inner rect uses fill="transparent" so the interior is clickable', () => {
+    const qrDoc: TicketDocument = {
+      stock: 'CONCERT',
+      elements: [{ type: 'qr', row: 100, col: 100, content: 'https://example.com' }]
+    }
+    const { container } = render(
+      <EditorCanvas document={qrDoc} selectedIndex={null} onSelect={vi.fn()} onUpdateElement={vi.fn()} />
+    )
+    const rect = container.querySelector('[data-element-index="0"] rect')
+    expect(rect?.getAttribute('fill')).toBe('transparent')
+  })
+
+  it('barcode element inner rect uses fill="transparent" so the interior is clickable', () => {
+    const barcodeDoc: TicketDocument = {
+      stock: 'CONCERT',
+      elements: [{ type: 'barcode', row: 100, col: 100, barcodeType: 'code128', height: 100, content: '12345' }]
+    }
+    const { container } = render(
+      <EditorCanvas document={barcodeDoc} selectedIndex={null} onSelect={vi.fn()} onUpdateElement={vi.fn()} />
+    )
+    const rect = container.querySelector('[data-element-index="0"] rect')
+    expect(rect?.getAttribute('fill')).toBe('transparent')
   })
 })

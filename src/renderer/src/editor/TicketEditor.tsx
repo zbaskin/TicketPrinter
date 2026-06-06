@@ -178,6 +178,10 @@ export default function TicketEditor(): React.JSX.Element {
                 }
               }}
               onUpdateElement={store.updateElement}
+              onRemoveElement={(idx) => {
+                store.removeElement(idx)
+                store.selectElement(null)
+              }}
             />
 
             <div className="w-72 shrink-0 flex flex-col gap-2 overflow-hidden">

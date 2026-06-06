@@ -9,6 +9,7 @@ interface EditorCanvasProps {
   selectedIndex: number | null
   onSelect: (index: number) => void
   onUpdateElement: (index: number, el: TicketElement) => void
+  onRemoveElement?: (index: number) => void
   zoom?: number
 }
 
@@ -76,30 +77,46 @@ function ElementShape({
     case 'hline': {
       const s = SCALE * zoom
       return (
-        <line
-          {...attrs}
-          x1={el.col * s}
-          y1={el.row * s}
-          x2={(el.col + el.length) * s}
-          y2={el.row * s}
-          stroke={strokeColor}
-          strokeWidth={Math.max(1, el.thickness * s)}
-        />
+        <g {...attrs}>
+          {/* Invisible thick hit area so thin lines are easy to click */}
+          <line
+            x1={el.col * s} y1={el.row * s}
+            x2={(el.col + el.length) * s} y2={el.row * s}
+            stroke="transparent"
+            strokeWidth={Math.max(10, el.thickness * s)}
+            pointerEvents="stroke"
+          />
+          <line
+            x1={el.col * s} y1={el.row * s}
+            x2={(el.col + el.length) * s} y2={el.row * s}
+            stroke={strokeColor}
+            strokeWidth={Math.max(1, el.thickness * s)}
+            pointerEvents="none"
+          />
+        </g>
       )
     }
 
     case 'vline': {
       const s = SCALE * zoom
       return (
-        <line
-          {...attrs}
-          x1={el.col * s}
-          y1={el.row * s}
-          x2={el.col * s}
-          y2={(el.row + el.height) * s}
-          stroke={strokeColor}
-          strokeWidth={Math.max(1, el.thickness * s)}
-        />
+        <g {...attrs}>
+          {/* Invisible thick hit area so thin lines are easy to click */}
+          <line
+            x1={el.col * s} y1={el.row * s}
+            x2={el.col * s} y2={(el.row + el.height) * s}
+            stroke="transparent"
+            strokeWidth={Math.max(10, el.thickness * s)}
+            pointerEvents="stroke"
+          />
+          <line
+            x1={el.col * s} y1={el.row * s}
+            x2={el.col * s} y2={(el.row + el.height) * s}
+            stroke={strokeColor}
+            strokeWidth={Math.max(1, el.thickness * s)}
+            pointerEvents="none"
+          />
+        </g>
       )
     }
 
@@ -132,7 +149,7 @@ function ElementShape({
             y={el.row * s}
             width={dim}
             height={dim}
-            fill="none"
+            fill="transparent"
             stroke={strokeColor}
             strokeDasharray="3 2"
             strokeWidth={1}
@@ -163,7 +180,7 @@ function ElementShape({
             y={el.row * s}
             width={barcodeW}
             height={barcodeH}
-            fill="none"
+            fill="transparent"
             stroke={strokeColor}
             strokeDasharray="3 2"
             strokeWidth={1}
@@ -256,6 +273,7 @@ export default function EditorCanvas({
   selectedIndex,
   onSelect,
   onUpdateElement,
+  onRemoveElement,
   zoom = 1
 }: EditorCanvasProps): React.JSX.Element {
   const stock = getStock(doc)
@@ -275,6 +293,21 @@ export default function EditorCanvas({
   // Inline text edit state
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
   const [editValue, setEditValue] = useState<string>('')
+
+  // Keyboard delete
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent): void {
+      if (e.key !== 'Delete' && e.key !== 'Backspace') return
+      if (selectedIndex === null) return
+      if (editingIndex !== null) return
+      const tag = (document.activeElement as HTMLElement)?.tagName?.toLowerCase()
+      if (tag === 'input' || tag === 'textarea') return
+      e.preventDefault()
+      onRemoveElement?.(selectedIndex)
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [selectedIndex, editingIndex, onRemoveElement])
 
   function handleElementPointerDown(e: React.PointerEvent, index: number): void {
     e.stopPropagation()

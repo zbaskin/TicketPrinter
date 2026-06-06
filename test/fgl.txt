@@ -1,0 +1,336 @@
+FGL CONTROL PANEL
+The printers allow the user to adjust various printer options through the control panel.
+
+To access and use the OPERATOR MENU, follow these steps:
+1. Ticket stock should be loaded into the printer. The LCD window displays FGL46G# - A# (# - number value
+depends on revision level; B represents the software series level; A# is the font)
+2. Press both MENU and TEST switches simultaneously for about 3 seconds. The LCD window displays OPERATOR MENU. (To access the FACTORY MENU, press MENU and CHOICES instead of MENU and
+TEST.) WARNING: Improper use of the factory menu may disable your printer.
+3. To scroll through the menu topic, use MENU stopping on the topic you wish to change.
+4. Press CHOICES to scroll through choices in the selected topic. NOTE: The printer displays a blinking cursor for the values presently stored in the printer.
+5. Once you have found the new value you want, press TEST. The LCD window displays EXIT AND SAVE?.
+If you wish to save the new value then press TEST again.
+6. If you do not wish to save the new value then press MENU. The LCD window displays JUST EXIT?.
+Press TEST to exit the OPERATOR MENU without saving new values or press MENU to enter back into
+the OPERATOR MENU.
+The below chart lists the present menu topics. These topics are subject to change.
+OPERATOR MENU FACTORY MENU FACTORY MENU (Continued)
+BAUD RATE? BAUD RATE? FLASH ACK MODE?
+MINI/MICRO? MINI/MICRO? SOFTWARE BUSY?
+PRINT SPEED? PRINT SPEED? BI-DIRECTIONAL?
+DIAGNOSTIC MODE? DIAGNOSTIC MODE? TEST TICKET?
+TICKET TYPE? TICKET TYPE? BASEBALL MODE?
+STATUS ENABLED? STATUS ENABLED? USB?
+TRANSPARENT MODE? TRANSPARENT MODE? FONT ENCODING?
+PAPER MODE? PAPER MODE? ACKNOWLEDGE?
+INC CUT1 COUNT? HEAD DPI? HIGH SPEED MODE?
+DEC CUT1 COUNT? SPECIAL HEAD? BUZZER?
+INC CUT2 COUNT? PATH TYPE? SHUFFLE MODE?
+56
+Selects proper menu topic
+(baud rate, cut count, etc.)
+Scrolls through choices in
+individual menu topics
+Enters new value. Also
+saves new values
+The following is an overview of what each Menu option does:
+BAUD RATE? Controls the serial interface baud rate, parity bit, data bits and stop bits.
+Default baud rate: legacy = 9600 ; starting spring 2022 (FGL46R# firmware) = 115200
+MINI/MICRO? Specifies the cutter configuration.
+MINI - cutter on all print paths
+MICRO - no cutter
+MINI1/MICRO2 - cutter on P1 ; no cutter on P2
+MICRO1/MINI2 - no cutter on P1 ; cutter on P2
+PRINT SPEED? Controls the speed the ticket travels at. Also effects the print quality.
+The numbers range from 0 - FASTEST to 7 - SLOWEST. 3 is factory default for most printers; 5 is
+the default for Lemur-X and Lemur-Z printers.
+DEC CUT1 COUNT? BUFFER MODE? CUTTER TYPE?
+PRINT MODE? CLEAR DOWNLOAD? CUTTER SPEED?
+PRINT INTENSITY? DEFAULT SETTINGS? ORIENTATION?
+TEST TICKET? INC CUT1 COUNT? MAGNETICS?
+EXIT AND SAVE? DEC CUT1 COUNT? ETHERNET?
+JUST EXIT INC CUT2 COUNT? IP ADDRESS?
+DEC CUT2 COUNT? SUBNET MASK?
+2-SIDED PRINTER? DEFAULT GATEWAY?
+PARK TICKET? SPEED/DUPLEX?
+TICKET MODE? RFID?
+PRINT MODE? USB DEVICE TYPE?
+PRINT INTENSITY? EXIT AND SAVE?
+SKI MODE? JUST EXIT
+1200,N,8,1 4800,N,8,1 19200,N,8,1 38400,E,7,1
+1200,E,7,1 4800,E,7,1 19200,E,7,1 57600,N,8,1
+1200,O,7,1 4800,O,7,1 19200,0,7,1 57600,E,7,1
+2400,N,8,1 9600,N,8,1 28800,N,8,1 115200,N,8,1
+2400,E,7,1 9600,E,7,1 28800,E,7,1 115200,E,7,1
+2400,O,7,1 9600,0,7,1 38400,N,8,1
+57
+DIAGNOSTIC MODE? Please consult the Diagnostic mode supplement
+Your choices are YES or NO. NO is factory default.
+TICKET TYPE? Defines how the optos are configured on the paper guide assembly.
+Here are the following choices:
+STATUS ENABLED? Sets status response protocols.
+Here are the following choices:
+TRANSPARENT MODE? Please consult the command sequence section
+Your choices are YES (Enabled) or NO (Disabled).
+PAPER MODE? Is generally used only for test purposes. It may also be used on roll stock with no
+black marks on the ticket. Your choices are YES (Enabled) or NO (Disabled). NO is factory default.
+HEAD DPI? Defines thermal head dpi (dots per inch) - choices are 200, 300 or 600.
+This feature is set at the factory and should not be changed, as an incorrect setting may damage
+the print head.
+SPECIAL HEAD? Is used when a special paper path size is installed (2.125”, 2.5”, 2.7”….)
+Here are the following choices: This feature is set at the factory.
+NORMAL Both optos are equidistant from the platen
+ATM Feed opto is mounted under the thermal head and cut opto is attached to the cutter assy.
+LABEL Same as ATM but the cut opto is a see through type.
+SPECIAL TICKET
+Standard configuration - load opto in front ; cut opto towards the rear
+NONE Disables the XON/XOFF and status response protocols
+SERIAL Enables the XON/XOFF and status response protocol for the serial port.
+PARALLEL Enables bi-directional parallel status responses if printer is configured as bi-directional.
+SER/PAR Enables both bi-directional parallel and serial status responses.
+USB Enables USB status responses
+USB/SER Enables USB and serial status responses
+USB/PAR Enables USB and bi-directional parallel
+USB/SER/PAR Enables USB, bi-directional parallel and serial status responses
+NO No special head
+ON P1 DUAL & SINGLE PATH PRINTER ONLY (fixed path)
+ON P2 DUAL PATH PRINTER ONLY on path #2 (fixed path)
+ON BOTH DUAL PATH PRINTER ONLY on both paths (fixed path)
+REV ADJ2 P1 DUAL & SINGLE PATH PRINTER WITH RADJ paper guide set to 2”
+58
+PATH TYPE? Defines the number of paper paths used.
+Here are the following choices:
+
+REV ADJ2 P2 DUAL PATH PRINTER WITH RADJ paper guide set to 2” on path #2
+REV ADJ2 BOTH DUAL PATH PRINTER WITH REV RADJ paper guide set to 2” on both paths
+REV ADJ2.5 P1 DUAL & SINGLE PATH PRINTER WITH RADJ paper guide set to 2.50”
+REV ADJ2.5 P2 DUAL PATH PRINTER WITH RADJ paper guide set to 2.50” on path #2
+REV ADJ2.5 BOTH DUAL PATH PRINTER WITH REV RADJ paper guide set to 2.50” on both paths
+REV ADJ2.7 P1 DUAL & SINGLE PATH PRINTER WITH RADJ paper guide set to 2.70”
+REV ADJ2.7 P2 DUAL PATH PRINTER WITH RADJ paper guide set to 2.70” on path #2
+REV ADJ2.7 BOTH DUAL PATH PRINTER WITH REV RADJ paper guide set to 2.70” on both paths
+REV ADJ3 P1 DUAL & SINGLE PATH PRINTER WITH RADJ paper guide set to 3”
+REV ADJ3 P2 DUAL PATH PRINTER WITH RADJ paper guide set to 3” on path #2
+REV ADJ3 BOTH DUAL PATH PRINTER WITH REV RADJ paper guide set to 3” on both paths
+REV ADJ2.125 P1 DUAL & SINGLE PATH PRINTER WITH RADJ paper guide set to 2.125”
+REV ADJ2.125 P2 DUAL PATH PRINTER WITH RADJ paper guide set to 2.125” on path #2
+REV ADJ2.125 BTH DUAL PATH PRINTER WITH REV RADJ paper guide set to 2.125” on both paths
+REV ADJ3.25 P1 DUAL & SINGLE PATH PRINTER WITH RADJ paper guide set to 3.25”
+REV ADJ3.25 P2 DUAL PATH PRINTER WITH RADJ paper guide set to 3.25” on path #2
+REV ADJ3.25 BTH DUAL PATH PRINTER WITH REV RADJ paper guide set to 3.25” on both paths
+PATH1 Locks a Dual path printer onto path #1 (all single path printers)
+PATH2 Locks a Dual path printer onto path #2
+DUAL Is used for Dual path printer
+DUAL SUPPLY Please consult your Programming Guide (Dual Printer Supplement)
+VENTEK DUAL Special setting only used by certain customers.
+PATH1 - OPTO5
+PATH1 EXIT OPTO
+MULTIFEED1 Lemur-MF - path 1 only
+MULTIFEED1-2 Lemur-MF - paths 1 and 2
+MULTIFEED1-3 Lemur-MF - paths 1, 2, 3
+MULTIFEED1-4 Lemur-MF - paths 1, 2, 3, 4
+59
+BUFFER MODE? Defines when the printer will go busy.
+Here are the following choices:
+CLEAR DOWNLOAD? Clears those items downloaded by the operator (PCX or softfonts).
+Your choices are YES or NO.
+DEFAULT SETTING Resets the printer back to the factory default setting.
+Your choices are YES or NO.
+INC CUT1 COUNT? Enables the operator to move the cut or tear position to the left (towards the
+ticket entrance area). Cut counts are increments of .003” for 300dpi and .005” for 200dpi. Depressing
+CHOICES changes the count value. 16 is factory default.
+NOTE: For a printer using a black mark the INC value should not exceed 38 (200 dpi) or 55 (300 dpi).
+DEC CUT1 COUNT? Enables the operator to move the cut or tear position to right (towards the
+ticket exit area). Cut counts are decrements of .003” for 300dpi and .005” for 200dpi. Depressing
+CHOICES changes the count value. 16 is factory default.
+INC CUT2 COUNT? Same as INC CUT1 COUNT? But effects path #2 on a dual path printer.
+DEC CUT2 COUNT? Same as DEC CUT1 COUNT? But effects path #2 on a dual path printer.
+2-SIDED PRINTER? Only used with 2S ticket printers.
+Your choices are YES (Enabled) or NO (Disabled). NO is factory default.
+PARK TICKET? Reverse the ticket to the print position after the last ticket in a group has been
+printed. Please consult your Programming Guide. Your choices are YES (Enabled) or NO (Disabled).
+NO is factory default.
+TICKET MODE? Defines how the printer will treat multiple tickets. Your choices are SINGLE or
+MULTIPLE. MULTIPLE is factory default.
+PRINT MODE? Defines the automatic ticket length calculation feature.
+THERMAL - The printer will feed out and then retract a ticket during this measurement.
+RIBBON - The printer will feed out one blank ticket on power up. This mode is used for label
+stock to prevent peeling.
+RIBBON1/THERMAL2 Path1 set to RIBBON and Path2 set to THERMAL
+THERMAL1/RIBBON2 Path1 set to THERMAL and Path2 set to RIBBON
+SINGLE MODE1 Go busy after each print command inserted in buffer
+SINGLE MODE2 Go busy after receiving <p> command
+MULTIPLE MODE Go busy when the input buffer is full (~ 4k)
+60
+PRINT INTENSITY? Controls the darkness of ticket print out.
+Here are the following choices:
+SKI MODE? Enables the operator to set an unprintable area on the first .50” of a ticket. This is ideally used for label stock. Your choices are YES (Enabled) or NO (Disabled).
+FLASH ACK MODE? Enables or disables an ACK being sent back to the host after a file flash or
+RAM operation. Your choices are YES (Enabled) or NO (Disabled). NO is factory default.
+SOFTWARE BUSY? Defines if the printer will go busy after each byte is received. Your choices are
+YES (Enabled) or NO (Disabled). This feature should normally be disabled.
+BI-DIRECTIONAL? Enables or disables the Bi-Directional parallel interface protocol. Your choices
+are YES (Enabled) or NO (Disabled). This feature should normally be disabled.
+TEST TICKET? Defines they type of self test ticket printed.
+BASEBALL MODE? Defines the type of software emulation protocol for certain Baseball teams in
+the US. This feature is set at the factory and should not be changed.
+USB? Only used for printer with USB interface connector.
+Your choices are YES (Enabled) or NO (Disabled)
+LIGHT
+MED LIGHT
+NORMAL (factory default)
+MED DARK
+SHORT HEAD LIFE
+STANDARD Normal self test ticket pattern (factory default)
+CONFIGURATION
+1
+To print configuration settings if printing on a 1” wide ticket
+CONFIGURATION
+2
+To print configuration settings if printing on a 2” wide ticket
+CONFIGURATION
+3
+To print configuration settings if printing on a 3” wide ticket
+CONFIGURATION
+4
+To print configuration settings if printing on a 4” wide ticket
+61
+FONT ENCODING? This feature is set at the factory and should not be changed.
+This command permanently sets the font encoding used with special two-byte character fonts.
+• None (default)
+• EUC-8
+• EUC-7
+• UNICODE-1
+• UNICODE-2
+• BIG-5
+• YANGJAE (obsolete)
+• SJIS
+• GBK
+• UTF-8 (FGL46M56 / FGL46N18 and higher, not available on FGL46G series)
+ACKNOWLEDGE? Defines the ends of print acknowledgment sent out by the printer.
+Your choices are NORMAL or DELAYED. Experienced users should only use this function.
+HIGH SPEED MODE? Only used on printers with a special pulley ratio to allow high speed
+printing. This feature is set at the factory and should not be changed.
+BUZZER? Only used for printer with a buzzer.
+Your choices are DISABLE (Disabled). 15 SECONDS, 30 SECONDS or 60 SECONDS (Interval between buzzes).
+SHUFFLE MODE? Shuffles the ticket every 15 minutes when the printer is inactive (please refer to
+the shuffle mode commands <sfe><sfd> for a full description). Your choices are YES (Enabled) or NO
+(Disabled). This feature is normally disabled with the exception of ATM style printers which
+have it enabled as the factory default setting.
+CUTTER TYPE? Defines the type of cutter the printer has.
+SILENT – This is the old Silent Cutter assembly.
+BOCA - improved, stepper motor driven cutter assembly.
+This feature is set at the factory and should not be changed.
+CUT SPEED? Defines the cut speed for a BOCA cutter type.
+This feature is set at the factory and should not be changed.
+• NORMAL - factory default; for 7.5 mil (.0075”) or thinner paper.
+• SLOW - allows cutter to cut through thicker material between 8-11 mil (.008” - .011”) thick.
+ORIENTATION? Defines the orientation of the ticket layout.
+REVERSE will rotate ticket layout 180°. (This will only work in conjunction with the boca200 or boca300 print driver)
+NORMAL (Default).
+Please consult the PRINTER DRIVER SUPPLEMENT for additional information.
+MAGNETICS? Defines if a printer is set up for magnetics. Your choices are YES (Enabled) or NO
+(Disabled). This feature is only set to YES for a MAG model printer.
+ETHERNET? Only used for printer with Ethernet interface connector.
+• NO - Ethernet not enabled.
+• YES - Uses the IP address that has been set in the printer by the customer.
+• Diagonstics - do not be use.
+• Valid Packets - do not be use.
+• DHCP Enabled - Automatically attempts to get ONLY an IP address from Local Server
+• DHCP/SUB/GATE - Get an IP address/Subnet Mask/Gateway from Local Server
+• DHCP/NR - get ONLY an IP address from Local Server, then register the name with the local
+NetBIOS name server – usually the WINS Server
+• DHCP/SUB/GATE/NR - get an IP address/Subnet Mask/Gateway from Local Server, then register the name with the local NetBIOS name server – usually the WINS Server
+62
+Please consult the ETHERNET INTERFACE ADDENDUM for additional information.
+IP ADDRESS? Enables the operator to change the printer’s Ethernet IP Address. Please consult
+the ETHERNET INTERFACE ADDENDUM for additional information.
+SUBNET MASK? Enables the operator to change the printer’s Ethernet Subnet Mask value. Please
+consult the ETHERNET INTERFACE ADDENDUM for additional information.
+DEFAULT GATEWAY? Enables the operator to change the printer’s Ethernet default Gateway value. Please consult the ETHERNET INTERFACE ADDENDUM for additional information.
+DNS SERVER? Enables the operator to change the printer’s Ethernet default DNS server value.
+Please consult the ETHERNET INTERFACE ADDENDUM for additional information.
+SPEED/DUPLEX? Enables the operator to change the printer’s Ethernet speed and duplex setting.
+Please consult the ETHERNET INTERFACE ADDENDUM for additional information.
+RFID? Only used for printer with RFID interface connector.
+• NO - Disabled
+• MIFARE ULTRALITE M1 reader set to Mifare UL (obsolete)
+• I-CODE (SL2) M1 reader set to I-Code (SL2) (obsolete)
+• Auto Detect M1 M1 reader in auto mode (obsolete reader)
+• Auto Detect M4 M4 reader in auto mode
+• Auto Dual M1 M1 reader in auto mode, 2 path printer (obsolete reader)
+• Auto Dual M4 M4 reader in auto mode, 2 path printer
+• Auto Detect M7 M7 reader in auto mode, not used at this time
+• Auto P2 M1 M1 reader in auto mode, 2 path printer on Path2 (obsolete reader)
+• Auto P2 M4 M4 reader in auto mode, 2 path printer on Path2
+• Auto P1 SL032 SL032 reader in auto mode on path1
+• Auto P1 SL015 SL015 reader in auto mode on path1
+• Auto P1 RT400 RT400 reader in auto mode on path1
+Please consult the RFID INTERFACE ADDENDUM for additional information.
+USB DEVICE TYPE?
+• PRINTER Printer device Class 7
+• HID HID device Class 3
+• SERIAL Virtual Serial port (added in version N85 and M123 firmware)
+Support for a virtual serial port has been added to the USB port in version N85 and M123. This USB
+port selection is currently only supported in Windows 10 and on the Apple computers running
+Yosemite or above. When this port type is selected and the USB cable is plugged into the PC a new
+serial port appears in the computer's device list. This serial port functions just like a hardware serial
+port and can be selected and used by any software supporting serial communications.
+NOTE: The USB device must be deleted from the operating system before it can be set to a different
+class. When changed it will then need to be reinstalled.
+Default USB DEVICE TYPE (boot mode): legacy = PRINTER ; starting spring 2022 (FGL46R#) = HID
+Default USB DEVICE TYPE (main code mode): PRINTER for all firmware
+BLUETOOTH? Defines the type of Bluetooth interface installed.
+Your choices are CLASSIC, LE or NO (Disabled)
+This feature is set at the factory and should not be changed.
+WIRELESS? Only used for printer with Wi-Fi interface.
+Your choices are DISABLED, STATIC IP or DHCP
+Note: You need to use the configuration and test program to setup the WiFi connection
+63
+AUTO CASH DRAWER Activates the cash draw interface after each print command.
+Your choices are YES (Enabled) or NO (Disabled)
+EXIT AND SAVE ! Will save any changes made to the above menu options.
+If you wish to save the new value then press TEST, if not press MENU.
+JUST EXIT? This function will exit the menu options without saving any changes. If you want to exit
+without saving the new values then press TEST. If not the depress MENU to continue going through
+the menu topics.
+Note: The following commands are valid for magnetic printers only.
+TICKET LENGTH COMMAND? Defines the magnetic ticket length. Your choices are 3.375”
+(factory default) or 4.0”. Experienced users should only use this function.
+PRINTER STYLE? This feature is set at the factory and should not be changed.
+INC REV COUNT? Enables the operator to move the position to the right (towards the ticket exit
+area). Print position value is in increments of .003” for 300dpi and .005” for 200dpi. Depressing
+CHOICES changes this value. This adjustment has a limited range and is set at the factory.
+DEC REV COUNT? Enables the operator to move the position to the left (towards the ticket entrance area). Print position value is in increments of .003” for 300dpi and .005” for 200dpi. Depressing
+CHOICES changes this value. This adjustment has a limited range and is set at the factory.
+INC BURST COUNT? Enables the operator to move the burst position to the left (towards the ticket entrance area). Cut counts are increments of .003” for 300dpi and .005” for 200dpi. Depressing
+CHOICES changes the count value. The burst count value can be set within +/-75 of the ticket length.
+This is set at the factory.
+DEC BURST COUNT? Enables the operator to move the cut or tear position to the right (towards
+the ticket exit area). Cut counts are decrements of .003” for 300dpi and .005” for 200dpi. Depressing
+CHOICES changes the count value. The burst count value can be set within +/-75 of the ticket length.
+This is set at the factory.
+AUTO REPRINT? Enables or disables the auto reprint feature. Your choices are YES (Enabled) or
+NO (Disabled). YES is factory default.
+PURGE ON VOID? Enables or disables purge on void feature. Your choices are YES (Enabled) or
+NO (Disabled)
+MAGNETICS TYPE? Defines the type of magnetic printer. This feature is set at the factory and
+should not be changed. Here are the following choices:
+TRACK SELECTION? Defines the track selection for the printer.
+BOTTOM
+TOP
+CENTER
+MINI KIOSK
+64
+Here are the following choices:
+TRACK 2 DENSITY? Defines track 2 density. Your choices are 75bpi (factory default) or 210bpi.
+Experienced users should only use this function.
+TRACK ENCODING? Defines track encoding. Your choices are 7/5/5 (factory default) or 7/7/7.
+Experienced users should only use this function.
+
+TRACKS 1/2/3
+TRACKS 1/2
+TRACK 1
+TRACK 2
+DISABLED
+65
