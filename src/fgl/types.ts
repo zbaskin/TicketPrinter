@@ -1,4 +1,4 @@
-export type FontId = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
+export type FontId = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16
 
 export type BarcodeType = 'code128' | 'code39' | 'upc-a' | 'ean13' | 'interleaved25'
 
@@ -10,6 +10,9 @@ export interface TextElement {
   hwScale?: [number, number]
   rotation?: 0 | 90 | 180 | 270
   content: string
+  align?: 'center' | 'right'
+  fieldWidth?: number
+  inverse?: boolean
 }
 
 export interface HLineElement {
@@ -44,6 +47,8 @@ export interface QRElement {
   col: number
   content: string
   dotSize?: number
+  nativeQR?: boolean
+  fontNumber?: number
 }
 
 export interface BarcodeElement {
@@ -53,6 +58,7 @@ export interface BarcodeElement {
   barcodeType: BarcodeType
   height: number
   content: string
+  showText?: boolean
 }
 
 export type TicketElement =

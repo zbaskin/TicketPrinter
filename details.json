@@ -1,0 +1,137 @@
+{
+  "stock": "CINEMA",
+  "elements": [
+    {
+      "type": "text",
+      "row": 130,
+      "col": 180,
+      "font": 3,
+      "hwScale": [
+        3,
+        3
+      ],
+      "content": "{{name}}"
+    },
+    {
+      "type": "text",
+      "row": 330,
+      "col": 175,
+      "font": 3,
+      "hwScale": [
+        3,
+        3
+      ],
+      "content": "{{event}}"
+    },
+    {
+      "type": "text",
+      "row": 1100,
+      "col": 195,
+      "font": 3,
+      "hwScale": [
+        3,
+        3
+      ],
+      "content": "{{row}}"
+    },
+    {
+      "type": "text",
+      "row": 710,
+      "col": 195,
+      "font": 3,
+      "hwScale": [
+        3,
+        3
+      ],
+      "content": "{{venue}}"
+    },
+    {
+      "type": "text",
+      "row": 510,
+      "col": 190,
+      "font": 3,
+      "hwScale": [
+        3,
+        3
+      ],
+      "content": "{{date}}"
+    },
+    {
+      "type": "text",
+      "row": 905,
+      "col": 190,
+      "font": 3,
+      "hwScale": [
+        3,
+        3
+      ],
+      "content": "{{section}}"
+    },
+    {
+      "type": "text",
+      "row": 1105,
+      "col": 60,
+      "font": 3,
+      "hwScale": [
+        3,
+        3
+      ],
+      "content": "6"
+    },
+    {
+      "type": "text",
+      "row": 915,
+      "col": 65,
+      "font": 3,
+      "hwScale": [
+        3,
+        3
+      ],
+      "content": "5"
+    },
+    {
+      "type": "text",
+      "row": 725,
+      "col": 65,
+      "font": 3,
+      "hwScale": [
+        3,
+        3
+      ],
+      "content": "4"
+    },
+    {
+      "type": "text",
+      "row": 520,
+      "col": 75,
+      "font": 3,
+      "hwScale": [
+        3,
+        3
+      ],
+      "content": "3"
+    },
+    {
+      "type": "text",
+      "row": 340,
+      "col": 72.03704842814659,
+      "font": 3,
+      "hwScale": [
+        3,
+        3
+      ],
+      "content": "2"
+    },
+    {
+      "type": "text",
+      "row": 140,
+      "col": 85,
+      "font": 3,
+      "hwScale": [
+        3,
+        3
+      ],
+      "content": "1"
+    }
+  ]
+}

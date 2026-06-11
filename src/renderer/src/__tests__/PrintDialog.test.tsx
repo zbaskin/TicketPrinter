@@ -70,14 +70,19 @@ describe('PrintDialog', () => {
     })
   })
 
-  it('calls printerApi.print N times when copies=N', async () => {
+  it('calls printerApi.print once with all copies combined in a single FGL string', async () => {
     mockPrint.mockResolvedValue({ success: true, bytesWritten: 50 })
     render(<PrintDialog document={sampleDoc} connection={usbConnection} onClose={vi.fn()} />)
     fireEvent.change(screen.getByRole('spinbutton'), { target: { value: '3' } })
     fireEvent.click(screen.getByRole('button', { name: /print/i }))
     await waitFor(() => {
-      expect(mockPrint).toHaveBeenCalledTimes(3)
+      expect(mockPrint).toHaveBeenCalledTimes(1)
     })
+    const fglArg = mockPrint.mock.calls[0][1] as string
+    // <RE2> tells the printer to print 2 additional copies (3 total) — one <p>, much less data than 3 full tickets
+    expect((fglArg.match(/<NF>/g) ?? []).length).toBe(1)
+    expect((fglArg.match(/<p>/g) ?? []).length).toBe(1)
+    expect(fglArg).toContain('<RE2>')
   })
 
   it('passes the connection object to printerApi.print', async () => {

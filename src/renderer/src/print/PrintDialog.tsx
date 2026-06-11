@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { compile } from '../../../fgl/compiler'
+import { compile, compileWithCopies } from '../../../fgl/compiler'
 import type { TicketDocument } from '../../../fgl/types'
 import type { PrinterConnection } from '../../../shared/types'
 import { connectionLabel } from '../../../shared/types'
@@ -36,24 +36,22 @@ export default function PrintDialog({ document: doc, connection, onClose }: Prin
   const isEmpty = !doc.rawFglOverride && doc.elements.length === 0
 
   async function handlePrint(): Promise<void> {
-    const fgl = compile(doc)
-    const states: CopyState[] = Array.from({ length: copies }, (_, i) => ({ index: i, status: 'queued' }))
+    const states: CopyState[] = Array.from({ length: copies }, (_, i) => ({ index: i, status: 'printing' }))
     setCopyStates(states)
     setPrinting(true)
 
-    for (let i = 0; i < copies; i++) {
-      setCopyStates((prev) => prev.map((c) => c.index === i ? { ...c, status: 'printing' } : c))
-      try {
-        const result = await window.printerApi.print(connection, fgl)
-        if (result.success) {
-          setCopyStates((prev) => prev.map((c) => c.index === i ? { ...c, status: 'done' } : c))
-        } else {
-          setCopyStates((prev) => prev.map((c) => c.index === i ? { ...c, status: 'error', error: result.error } : c))
-        }
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err)
-        setCopyStates((prev) => prev.map((c) => c.index === i ? { ...c, status: 'error', error: msg } : c))
+    const allFgl = compileWithCopies(doc, copies)
+
+    try {
+      const result = await window.printerApi.print(connection, allFgl)
+      if (result.success) {
+        setCopyStates((prev) => prev.map((c) => ({ ...c, status: 'done' })))
+      } else {
+        setCopyStates((prev) => prev.map((c) => ({ ...c, status: 'error', error: result.error })))
       }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      setCopyStates((prev) => prev.map((c) => ({ ...c, status: 'error', error: msg })))
     }
 
     setPrinting(false)

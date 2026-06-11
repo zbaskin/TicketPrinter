@@ -74,7 +74,27 @@ describe('useBatchPrint', () => {
 
   // ─── startPrint ─────────────────────────────────────────────────────────────
 
-  it('startPrint sets row to "done" on success', async () => {
+  it('startPrint sends all rows in a single print call', async () => {
+    mockPrint.mockResolvedValue({ success: true })
+    const { result } = renderHook(() => useBatchPrint())
+    act(() => { result.current.loadRows(sampleData) })
+    await act(async () => { result.current.startPrint(sampleDoc, usbConnection) })
+    expect(mockPrint).toHaveBeenCalledTimes(1)
+    expect(result.current.rows.every((r) => r.status === 'done')).toBe(true)
+  })
+
+  it('single FGL call contains all rows substituted content', async () => {
+    mockPrint.mockResolvedValue({ success: true })
+    const { result } = renderHook(() => useBatchPrint())
+    act(() => { result.current.loadRows(sampleData) })
+    await act(async () => { result.current.startPrint(sampleDoc, usbConnection) })
+    const fglArg = mockPrint.mock.calls[0][1] as string
+    expect(fglArg).toContain('Hello Alice')
+    expect(fglArg).toContain('Hello Bob')
+    expect(fglArg).toContain('Hello Carol')
+  })
+
+  it('startPrint sets all rows to "done" on success', async () => {
     mockPrint.mockResolvedValue({ success: true })
     const { result } = renderHook(() => useBatchPrint())
     act(() => { result.current.loadRows([{ name: 'Alice' }]) })
@@ -82,7 +102,7 @@ describe('useBatchPrint', () => {
     expect(result.current.rows[0].status).toBe('done')
   })
 
-  it('startPrint sets row to "error" when result.success is false', async () => {
+  it('startPrint sets all rows to "error" when result.success is false', async () => {
     mockPrint.mockResolvedValue({ success: false, error: 'Paper jam' })
     const { result } = renderHook(() => useBatchPrint())
     act(() => { result.current.loadRows([{ name: 'Alice' }]) })
@@ -91,22 +111,13 @@ describe('useBatchPrint', () => {
     expect(result.current.rows[0].error).toBe('Paper jam')
   })
 
-  it('startPrint sets row to "error" when print throws', async () => {
+  it('startPrint sets all rows to "error" when print throws', async () => {
     mockPrint.mockRejectedValue(new Error('Connection reset'))
     const { result } = renderHook(() => useBatchPrint())
     act(() => { result.current.loadRows([{ name: 'Alice' }]) })
     await act(async () => { result.current.startPrint(sampleDoc, usbConnection) })
     expect(result.current.rows[0].status).toBe('error')
     expect(result.current.rows[0].error).toBe('Connection reset')
-  })
-
-  it('startPrint processes all rows in sequence', async () => {
-    mockPrint.mockResolvedValue({ success: true })
-    const { result } = renderHook(() => useBatchPrint())
-    act(() => { result.current.loadRows(sampleData) })
-    await act(async () => { result.current.startPrint(sampleDoc, usbConnection) })
-    expect(mockPrint).toHaveBeenCalledTimes(3)
-    expect(result.current.rows.every((r) => r.status === 'done')).toBe(true)
   })
 
   it('startPrint passes the connection to printerApi.print', async () => {
@@ -126,13 +137,13 @@ describe('useBatchPrint', () => {
     expect(mockPrint).toHaveBeenCalledWith(ethConnection, expect.any(String))
   })
 
-  it('startPrint calls compile(applyDataRow(doc, row.data)) for each row', async () => {
-    mockPrint.mockResolvedValue({ success: true })
+  it('sets all rows to error when the batch print call fails', async () => {
+    mockPrint.mockResolvedValue({ success: false, error: 'Paper jam' })
     const { result } = renderHook(() => useBatchPrint())
-    act(() => { result.current.loadRows([{ name: 'Alice' }]) })
+    act(() => { result.current.loadRows(sampleData) })
     await act(async () => { result.current.startPrint(sampleDoc, usbConnection) })
-    const fglArg = mockPrint.mock.calls[0][1] as string
-    expect(fglArg).toContain('Hello Alice')
+    expect(result.current.rows.every((r) => r.status === 'error')).toBe(true)
+    expect(result.current.rows[0].error).toBe('Paper jam')
   })
 
   it('isRunning is false after all rows complete', async () => {
@@ -143,36 +154,23 @@ describe('useBatchPrint', () => {
     expect(result.current.isRunning).toBe(false)
   })
 
-  it('continues processing remaining rows when one row errors', async () => {
-    mockPrint
-      .mockResolvedValueOnce({ success: false, error: 'Fail' })
-      .mockResolvedValue({ success: true })
+  it('reprints all rows when Print All is clicked after all rows are done', async () => {
+    mockPrint.mockResolvedValue({ success: true })
     const { result } = renderHook(() => useBatchPrint())
-    act(() => { result.current.loadRows(sampleData) })
+    act(() => { result.current.loadRows([{ name: 'Alice' }, { name: 'Bob' }]) })
     await act(async () => { result.current.startPrint(sampleDoc, usbConnection) })
-    expect(result.current.rows[0].status).toBe('error')
-    expect(result.current.rows[1].status).toBe('done')
-    expect(result.current.rows[2].status).toBe('done')
+    expect(result.current.rows.every((r) => r.status === 'done')).toBe(true)
+    // Second print without reset
+    await act(async () => { result.current.startPrint(sampleDoc, usbConnection) })
+    expect(mockPrint).toHaveBeenCalledTimes(2)
+    expect(result.current.rows.every((r) => r.status === 'done')).toBe(true)
   })
 
   // ─── pause ──────────────────────────────────────────────────────────────────
 
-  it('pause stops the loop after the current row completes', async () => {
-    let resolveFirst!: (v: unknown) => void
-    mockPrint
-      .mockReturnValueOnce(new Promise((res) => { resolveFirst = res }))
-      .mockResolvedValue({ success: true })
-
+  it('pause() is callable without throwing', () => {
     const { result } = renderHook(() => useBatchPrint())
-    act(() => { result.current.loadRows(sampleData) })
-    act(() => { result.current.startPrint(sampleDoc, usbConnection) })
-    act(() => { result.current.pause() })
-    await act(async () => { resolveFirst({ success: true }) })
-
-    expect(result.current.rows[0].status).toBe('done')
-    expect(result.current.rows[1].status).toBe('pending')
-    expect(result.current.rows[2].status).toBe('pending')
-    expect(result.current.isRunning).toBe(false)
+    expect(() => act(() => { result.current.pause() })).not.toThrow()
   })
 
   // ─── reset ──────────────────────────────────────────────────────────────────

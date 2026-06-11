@@ -131,7 +131,7 @@ export default function BatchPrintPanel({ document: doc, connection }: BatchPrin
                       </td>
                       <td className="px-2 py-1 text-right">
                         <span className={`font-medium ${STATUS_COLORS[row.status as RowStatus]}`}>
-                          {row.status}
+                          {row.status}{row.error ? ` — ${row.error}` : ''}
                         </span>
                       </td>
                     </tr>

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { compile } from '../compiler'
+import { compile, compileBatch, compileWithCopies } from '../compiler'
 import type { TicketDocument } from '../types'
 
 const base: TicketDocument = { stock: 'CONCERT', elements: [] }
@@ -11,6 +11,11 @@ describe('compile', () => {
     expect(result).toContain('<p>')
     expect(result).not.toContain('<HEAT')
     expect(result.indexOf('<NF>')).toBeLessThan(result.indexOf('<p>'))
+  })
+
+  it('CONCERT compile emits form-length command FL3300 immediately after NF', () => {
+    const result = compile(base)
+    expect(result).toContain('<NF><FL3300>')
   })
 
   it('returns rawFglOverride verbatim when set', () => {
@@ -207,6 +212,11 @@ describe('compile CINEMA coordinate swap', () => {
     }
   })
 
+  it('CINEMA compile emits form-length command FL1200 immediately after NF', () => {
+    const result = compile(cinema)
+    expect(result).toContain('<NF><FL1200>')
+  })
+
   it('does not affect CONCERT elements', () => {
     const result = compile({
       ...base,
@@ -216,5 +226,347 @@ describe('compile CINEMA coordinate swap', () => {
     expect(result).not.toContain('<RR>')
     expect(result).not.toContain('<RL>')
     expect(result).not.toContain('<NR>')
+  })
+})
+
+describe('compileBatch', () => {
+  it('returns empty string for empty array', () => {
+    expect(compileBatch([])).toBe('')
+  })
+
+  it('single doc matches compile(doc)', () => {
+    expect(compileBatch([base])).toBe(compile(base))
+  })
+
+  it('two docs: first ticket is compile(doc), second starts immediately after without NF', () => {
+    const first = compile(base)
+    const result = compileBatch([base, base])
+    expect(result.startsWith(first)).toBe(true)
+    // Second ticket must have FL and p but no NF
+    const second = result.slice(first.length)
+    expect(second).toContain('<FL')
+    expect(second).toContain('<p>')
+    expect(second).not.toContain('<NF>')
+  })
+
+  it('two docs contain NF exactly once (only the first ticket)', () => {
+    const result = compileBatch([base, base])
+    expect((result.match(/<NF>/g) ?? []).length).toBe(1)
+  })
+
+  it('subsequent tickets in the batch do not start with NF', () => {
+    const single = compile(base)
+    const result = compileBatch([base, base])
+    // After the first ticket's closing <p>, the remainder must not contain <NF>
+    const afterFirstTicket = result.slice(single.length)
+    expect(afterFirstTicket).not.toContain('<NF>')
+  })
+
+  it('two docs contain p exactly twice', () => {
+    const result = compileBatch([base, base])
+    expect((result.match(/<p>/g) ?? []).length).toBe(2)
+  })
+
+  it('preserves per-ticket element content', () => {
+    const doc1: TicketDocument = { ...base, elements: [{ type: 'text', row: 100, col: 100, font: 1, content: 'TicketOne' }] }
+    const doc2: TicketDocument = { ...base, elements: [{ type: 'text', row: 100, col: 100, font: 1, content: 'TicketTwo' }] }
+    const result = compileBatch([doc1, doc2])
+    expect(result).toContain('TicketOne')
+    expect(result).toContain('TicketTwo')
+  })
+
+  it('handles mixed stock types in the same batch', () => {
+    const result = compileBatch([base, { stock: 'CINEMA', elements: [] }])
+    expect(result).toContain('<FL3300>')
+    expect(result).toContain('<FL1200>')
+  })
+})
+
+// ─── compileWithCopies ────────────────────────────────────────────────────────
+
+describe('compileWithCopies', () => {
+  it('copies=1 produces same output as compile(doc)', () => {
+    expect(compileWithCopies(base, 1)).toBe(compile(base))
+  })
+
+  it('copies=1 does not emit <RE> command', () => {
+    expect(compileWithCopies(base, 1)).not.toContain('<RE')
+  })
+
+  it('copies=3 emits <RE2> immediately before <p>', () => {
+    const result = compileWithCopies(base, 3)
+    expect(result).toContain('<RE2>')
+    expect(result.indexOf('<RE2>')).toBeLessThan(result.indexOf('<p>'))
+  })
+
+  it('copies=5 emits <RE4>', () => {
+    expect(compileWithCopies(base, 5)).toContain('<RE4>')
+  })
+
+  it('copies>1 has exactly one <p>', () => {
+    const result = compileWithCopies(base, 5)
+    expect((result.match(/<p>/g) ?? []).length).toBe(1)
+  })
+
+  it('copies>1 has exactly one <NF>', () => {
+    const result = compileWithCopies(base, 3)
+    expect((result.match(/<NF>/g) ?? []).length).toBe(1)
+  })
+
+  it('rawFglOverride is returned verbatim regardless of copies', () => {
+    const doc: TicketDocument = { ...base, rawFglOverride: '<NF>CUSTOM<p>' }
+    expect(compileWithCopies(doc, 5)).toBe('<NF>CUSTOM<p>')
+  })
+
+  it('preserves element content with copies>1', () => {
+    const doc: TicketDocument = {
+      ...base,
+      elements: [{ type: 'text', row: 100, col: 100, font: 1, content: 'Hello' }]
+    }
+    const result = compileWithCopies(doc, 3)
+    expect(result).toContain('Hello')
+    expect(result).toContain('<RE2>')
+  })
+})
+
+// ─── barcode delimiter wrapping ───────────────────────────────────────────────
+
+describe('barcode content delimiter auto-wrapping', () => {
+  it('code128 wraps bare content in ^ delimiters', () => {
+    const result = compile({
+      ...base,
+      elements: [{ type: 'barcode', barcodeType: 'code128', row: 100, col: 100, height: 40, content: 'HELLO' }]
+    })
+    expect(result).toContain('^HELLO^')
+  })
+
+  it('code128 does not double-wrap already-delimited content', () => {
+    const result = compile({
+      ...base,
+      elements: [{ type: 'barcode', barcodeType: 'code128', row: 100, col: 100, height: 40, content: '^HELLO^' }]
+    })
+    expect(result).toContain('^HELLO^')
+    expect(result).not.toContain('^^')
+  })
+
+  it('code39 wraps content in * delimiters', () => {
+    const result = compile({
+      ...base,
+      elements: [{ type: 'barcode', barcodeType: 'code39', row: 100, col: 100, height: 40, content: 'ABC123' }]
+    })
+    expect(result).toContain('*ABC123*')
+  })
+
+  it('code39 does not double-wrap already-delimited content', () => {
+    const result = compile({
+      ...base,
+      elements: [{ type: 'barcode', barcodeType: 'code39', row: 100, col: 100, height: 40, content: '*ABC123*' }]
+    })
+    expect(result).toContain('*ABC123*')
+    expect(result).not.toContain('**')
+  })
+
+  it('interleaved25 wraps content in : delimiters', () => {
+    const result = compile({
+      ...base,
+      elements: [{ type: 'barcode', barcodeType: 'interleaved25', row: 100, col: 100, height: 40, content: '12345678' }]
+    })
+    expect(result).toContain(':12345678:')
+  })
+
+  it('upc-a with 12 digits gets J/K/L guard characters', () => {
+    const result = compile({
+      ...base,
+      elements: [{ type: 'barcode', barcodeType: 'upc-a', row: 100, col: 100, height: 40, content: '012345678905' }]
+    })
+    expect(result).toContain('J012345K678905L')
+  })
+
+  it('upc-a already with J guard is left unchanged', () => {
+    const result = compile({
+      ...base,
+      elements: [{ type: 'barcode', barcodeType: 'upc-a', row: 100, col: 100, height: 40, content: 'J012345K678905L' }]
+    })
+    expect(result).toContain('J012345K678905L')
+    expect(result).not.toContain('JJ')
+  })
+
+  it('ean13 with 13 digits gets parity + J/K/L guard characters', () => {
+    const result = compile({
+      ...base,
+      elements: [{ type: 'barcode', barcodeType: 'ean13', row: 100, col: 100, height: 40, content: '5901234123457' }]
+    })
+    expect(result).toContain('5J901234K123457L')
+  })
+})
+
+// ─── barcode showText (<BI>) ──────────────────────────────────────────────────
+
+describe('barcode showText (human-readable interpretation)', () => {
+  it('emits <BI> before the barcode command when showText=true', () => {
+    const result = compile({
+      ...base,
+      elements: [{ type: 'barcode', barcodeType: 'code128', row: 100, col: 100, height: 40, content: 'HELLO', showText: true }]
+    })
+    expect(result).toContain('<BI>')
+    expect(result.indexOf('<BI>')).toBeLessThan(result.indexOf('<bc'))
+  })
+
+  it('does not emit <BI> when showText is absent', () => {
+    const result = compile({
+      ...base,
+      elements: [{ type: 'barcode', barcodeType: 'code128', row: 100, col: 100, height: 40, content: 'HELLO' }]
+    })
+    expect(result).not.toContain('<BI>')
+  })
+
+  it('does not emit <BI> when showText=false', () => {
+    const result = compile({
+      ...base,
+      elements: [{ type: 'barcode', barcodeType: 'code128', row: 100, col: 100, height: 40, content: 'HELLO', showText: false }]
+    })
+    expect(result).not.toContain('<BI>')
+  })
+})
+
+// ─── text alignment (CTR / RTJ) ───────────────────────────────────────────────
+
+describe('text alignment', () => {
+  it('align=center with fieldWidth emits <CTR{width}>~text~', () => {
+    const result = compile({
+      ...base,
+      elements: [{ type: 'text', row: 100, col: 100, font: 3, content: 'Hello', align: 'center', fieldWidth: 500 }]
+    })
+    expect(result).toContain('<CTR500>~Hello~')
+  })
+
+  it('align=right with fieldWidth emits <RTJ{width}>~text~', () => {
+    const result = compile({
+      ...base,
+      elements: [{ type: 'text', row: 100, col: 100, font: 3, content: 'Hello', align: 'right', fieldWidth: 500 }]
+    })
+    expect(result).toContain('<RTJ500>~Hello~')
+  })
+
+  it('no align emits content directly without CTR or RTJ', () => {
+    const result = compile({
+      ...base,
+      elements: [{ type: 'text', row: 100, col: 100, font: 3, content: 'Hello' }]
+    })
+    expect(result).not.toContain('<CTR')
+    expect(result).not.toContain('<RTJ')
+    expect(result).toContain('Hello')
+  })
+
+  it('centered text still includes RC positioning and font', () => {
+    const result = compile({
+      ...base,
+      elements: [{ type: 'text', row: 100, col: 200, font: 5, content: 'Test', align: 'center', fieldWidth: 400 }]
+    })
+    expect(result).toContain('<F5>')
+    expect(result).toContain('<RC100,200>')
+    expect(result).toContain('<CTR400>~Test~')
+  })
+})
+
+// ─── inverse text (<EI>/<DI>) ─────────────────────────────────────────────────
+
+describe('inverse text', () => {
+  it('inverse=true wraps content between <EI> and <DI>', () => {
+    const result = compile({
+      ...base,
+      elements: [{ type: 'text', row: 100, col: 100, font: 3, content: 'Hello', inverse: true }]
+    })
+    expect(result).toContain('<EI>')
+    expect(result).toContain('<DI>')
+    expect(result.indexOf('<EI>')).toBeLessThan(result.indexOf('Hello'))
+    expect(result.indexOf('Hello')).toBeLessThan(result.indexOf('<DI>'))
+  })
+
+  it('inverse=false does not emit EI or DI', () => {
+    const result = compile({
+      ...base,
+      elements: [{ type: 'text', row: 100, col: 100, font: 3, content: 'Hello', inverse: false }]
+    })
+    expect(result).not.toContain('<EI>')
+    expect(result).not.toContain('<DI>')
+  })
+
+  it('no inverse property does not emit EI or DI', () => {
+    const result = compile({
+      ...base,
+      elements: [{ type: 'text', row: 100, col: 100, font: 3, content: 'Hello' }]
+    })
+    expect(result).not.toContain('<EI>')
+    expect(result).not.toContain('<DI>')
+  })
+
+  it('inverse=true combined with rotation emits EI/DI inside rotation commands', () => {
+    const result = compile({
+      ...base,
+      elements: [{ type: 'text', row: 100, col: 100, font: 3, content: 'Hello', inverse: true, rotation: 90 }]
+    })
+    expect(result).toContain('<RR>')
+    expect(result).toContain('<EI>')
+    expect(result).toContain('<DI>')
+    expect(result).toContain('<NR>')
+  })
+})
+
+// ─── native QR code (<QR> command) ───────────────────────────────────────────
+
+describe('native QR code', () => {
+  it('nativeQR=true emits <QR>{data} instead of LH commands', () => {
+    const result = compile({
+      ...base,
+      elements: [{ type: 'qr', row: 100, col: 200, content: 'https://example.com', nativeQR: true }]
+    })
+    expect(result).toContain('<QR>')
+    expect(result).toContain('{https://example.com}')
+    expect(result).not.toMatch(/<LH\d+,\d+,\d+,\d+>/)
+  })
+
+  it('nativeQR=true defaults to font F68', () => {
+    const result = compile({
+      ...base,
+      elements: [{ type: 'qr', row: 100, col: 200, content: 'TEST', nativeQR: true }]
+    })
+    expect(result).toContain('<F68>')
+  })
+
+  it('nativeQR=true uses provided fontNumber', () => {
+    const result = compile({
+      ...base,
+      elements: [{ type: 'qr', row: 100, col: 200, content: 'TEST', nativeQR: true, fontNumber: 72 }]
+    })
+    expect(result).toContain('<F72>')
+  })
+
+  it('nativeQR=true uses <RC{row},{col}> for position', () => {
+    const result = compile({
+      ...base,
+      elements: [{ type: 'qr', row: 100, col: 200, content: 'TEST', nativeQR: true }]
+    })
+    expect(result).toContain('<RC100,200>')
+  })
+
+  it('nativeQR CINEMA applies coordinate transform', () => {
+    const result = compile({
+      ...cinema,
+      elements: [{ type: 'qr', row: 100, col: 200, content: 'TEST', nativeQR: true }]
+    })
+    // FGL_row = canvas_col = 200, FGL_col = 1200 - canvas_row = 1100
+    expect(result).toContain('<RC200,1100>')
+    expect(result).toContain('<QR>')
+    expect(result).toContain('{TEST}')
+  })
+
+  it('nativeQR=false still uses LH matrix approach', () => {
+    const result = compile({
+      ...base,
+      elements: [{ type: 'qr', row: 100, col: 100, content: 'A', nativeQR: false }]
+    })
+    expect(result).toMatch(/<LH\d+,\d+,\d+,6>/)
+    expect(result).not.toContain('<QR>')
   })
 })

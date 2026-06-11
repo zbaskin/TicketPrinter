@@ -10,6 +10,7 @@ import type {
   BarcodeType
 } from './types'
 import { generateQRMatrix } from './qr'
+import { getStock } from './stock'
 
 // Plain integer, no zero-padding (FGL does not require padding)
 function n(v: number): string {
@@ -23,7 +24,11 @@ const ROTATION_CMDS: Record<number, string> = {
   270: '<RL>'
 }
 
-const CINEMA_WIDTH = 1200 // STOCKS.CINEMA.widthDots
+// CINEMA form height = 1200 dots (2" × 600 DPI).
+// FGL col range is 0–1200; values above 1200 are silently discarded by the printer.
+// If physical output appears offset, adjust the printer's TOF (Top of Form) setting —
+// do NOT increase this constant past 1200, as that clips the top half of the canvas.
+const CINEMA_WIDTH = 1200
 
 // CINEMA physical layout (Boca Lemur, empirically confirmed):
 //   FGL row = horizontal axis (3.25", 0–1950): increasing row moves RIGHT
@@ -42,7 +47,16 @@ function compileText(el: TextElement): string {
   const rotCmd = el.rotation ? (ROTATION_CMDS[el.rotation] ?? '') : ''
   const resetRot = rotCmd ? '<NR>' : ''
   const pos = `<RC${n(el.row)},${n(el.col)}>`
-  return `${font}${hw}${rotCmd}${pos}${el.content}${resetRot}`
+  const inverseOn = el.inverse ? '<EI>' : ''
+  const inverseOff = el.inverse ? '<DI>' : ''
+
+  if (el.align === 'center' && el.fieldWidth) {
+    return `${font}${hw}${rotCmd}${pos}${inverseOn}<CTR${el.fieldWidth}>~${el.content}~${inverseOff}${resetRot}`
+  }
+  if (el.align === 'right' && el.fieldWidth) {
+    return `${font}${hw}${rotCmd}${pos}${inverseOn}<RTJ${el.fieldWidth}>~${el.content}~${inverseOff}${resetRot}`
+  }
+  return `${font}${hw}${rotCmd}${pos}${inverseOn}${el.content}${inverseOff}${resetRot}`
 }
 
 function compileHLine(el: HLineElement): string {
@@ -64,7 +78,49 @@ function compileBox(el: BoxElement): string {
   return `<BX${n(el.row)},${n(el.col)},${n(el.row + el.height)},${n(el.col + el.width)}>`
 }
 
+// Wrap barcode content in the delimiters required by the FGL spec for each type.
+// Already-wrapped content is left unchanged to avoid double-wrapping.
+function wrapBarcodeContent(type: BarcodeType, content: string): string {
+  switch (type) {
+    case 'code128':
+      if (!content.startsWith('^')) content = '^' + content
+      if (!content.endsWith('^')) content = content + '^'
+      return content
+    case 'code39':
+      if (!content.startsWith('*')) content = '*' + content
+      if (!content.endsWith('*')) content = content + '*'
+      return content
+    case 'interleaved25':
+      if (!content.startsWith(':')) content = ':' + content
+      if (!content.endsWith(':')) content = content + ':'
+      return content
+    case 'upc-a':
+      // 12-digit string gets J/K/L guard characters; already-formatted strings pass through
+      if (content.length === 12 && !content.includes('J')) {
+        return `J${content.slice(0, 6)}K${content.slice(6)}L`
+      }
+      return content
+    case 'ean13':
+      // 13-digit string: first digit is parity flag, rest gets J/K/L guards
+      if (content.length === 13 && !content.includes('J')) {
+        return `${content[0]}J${content.slice(1, 7)}K${content.slice(7)}L`
+      }
+      return content
+    default:
+      return content
+  }
+}
+
 function compileQR(el: QRElement, cinema = false): string {
+  // Native QR: use the printer's built-in <QR> command (requires FGL46G36+ + font SB03+).
+  // Much smaller FGL payload than the manual matrix approach.
+  if (el.nativeQR) {
+    const fontNum = el.fontNumber ?? 68  // F65–78 controls module size; 68 ≈ 6pt (medium)
+    const fglRow = cinema ? el.col : el.row
+    const fglCol = cinema ? CINEMA_WIDTH - el.row : el.col
+    return `<F${fontNum}><RC${n(fglRow)},${n(fglCol)}><QR>{${el.content}}`
+  }
+
   const dotSize = el.dotSize ?? 6
   const matrix = generateQRMatrix(el.content)
   const parts: string[] = []
@@ -100,11 +156,13 @@ function compileBarcode(el: BarcodeElement, cinema = false): string {
   const cmd = BARCODE_CMDS[el.barcodeType]
   // Height in FGL barcode units (1 unit = 8 dots)
   const heightUnits = Math.max(1, Math.round(el.height / 8))
+  const bi = el.showText ? '<BI>' : ''
   // <X2> = 2× bar width (minimum for reliable scanning at high DPI)
   // CINEMA: <RL> matches text rotation direction
   const rotPrefix = cinema ? '<RL>' : ''
   const rotSuffix = cinema ? '<NR>' : ''
-  return `<X2>${rotPrefix}<RC${n(el.row)},${n(el.col)}><${cmd}${heightUnits}>${el.content}${rotSuffix}`
+  const content = wrapBarcodeContent(el.barcodeType, el.content)
+  return `<X2>${bi}${rotPrefix}<RC${n(el.row)},${n(el.col)}><${cmd}${heightUnits}>${content}${rotSuffix}`
 }
 
 // CINEMA coordinate transform: FGL_row = canvas_col, FGL_col = 1200 - canvas_row.
@@ -170,15 +228,42 @@ function compileElement(el: TicketElement, cinema: boolean): string {
   return compileElementRaw(transformSwap(el))
 }
 
-export function compile(doc: TicketDocument): string {
+// Body of a ticket without the leading <NF>. Used for tickets after the first
+// in a batch stream — <NF> between tickets causes the printer to advance an
+// extra form, skipping the current ticket's print position.
+// When copies > 1, <RE{copies-1}> is prepended to <p> so the printer repeats
+// internally — no need to send the full FGL N times.
+export function compileSingle(doc: TicketDocument, copies = 1): string {
   if (doc.rawFglOverride !== undefined) {
     return doc.rawFglOverride
   }
   const cinema = doc.stock === 'CINEMA'
-  const parts: string[] = ['<NF>']
+  const stock = getStock(doc)
+  const feedDots = cinema ? stock.widthDots : stock.heightDots
+  const parts: string[] = [`<FL${feedDots}>`]
   for (const el of doc.elements) {
     parts.push(compileElement(el, cinema))
   }
-  parts.push('<p>')
+  parts.push(copies > 1 ? `<RE${copies - 1}><p>` : '<p>')
   return parts.join('')
+}
+
+export function compileBatch(docs: TicketDocument[]): string {
+  if (docs.length === 0) return ''
+  return compile(docs[0]) + docs.slice(1).map((d) => compileSingle(d)).join('')
+}
+
+export function compile(doc: TicketDocument): string {
+  if (doc.rawFglOverride !== undefined) {
+    return doc.rawFglOverride
+  }
+  return '<NF>' + compileSingle(doc)
+}
+
+// Print N copies of one ticket using the printer's native repeat mechanism.
+// Sends the layout once with <RE{copies-1}> before <p> — far more efficient
+// than compiling N identical tickets via compileBatch.
+export function compileWithCopies(doc: TicketDocument, copies: number): string {
+  if (doc.rawFglOverride !== undefined) return doc.rawFglOverride
+  return '<NF>' + compileSingle(doc, copies)
 }
